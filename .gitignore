@@ -1,7 +1,7 @@
 # Directories
 .vs/
 .vscode/
-/bin/
+bin/
 bin-int/
 run/
 
