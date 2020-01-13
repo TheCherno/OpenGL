@@ -1,7 +1,10 @@
 # Directories
 .vs/
+.vscode/
 /bin/
 bin-int/
+run/
 
 # Files
 *.user
+Makefile
