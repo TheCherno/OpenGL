@@ -2,6 +2,7 @@
 .vs/
 .vscode/
 bin/
+!/vendor/bin
 bin-int/
 run/
 
