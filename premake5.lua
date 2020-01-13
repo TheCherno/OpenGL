@@ -17,14 +17,14 @@ outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 -- Include directories relative to root folder (solution directory)
 IncludeDir = {}
-IncludeDir["GLFW"] = "OpenGL-Core/vendor/GLFW/include"
+IncludeDir["GLFW"] = "OpenGL-Core/vendor/glfw/include"
 IncludeDir["Glad"] = "OpenGL-Core/vendor/Glad/include"
 IncludeDir["ImGui"] = "OpenGL-Core/vendor/imgui"
 IncludeDir["glm"] = "OpenGL-Core/vendor/glm"
 IncludeDir["stb_image"] = "OpenGL-Core/vendor/stb_image"
 
 group "Dependencies"
-	include "OpenGL-Core/vendor/GLFW"
+	include "OpenGL-Core/vendor/glfw"
 	include "OpenGL-Core/vendor/Glad"
 	include "OpenGL-Core/vendor/imgui"
 
@@ -53,9 +53,13 @@ project "OpenGL-Core"
 		"%{prj.name}/vendor/glm/glm/**.inl",
 	}
 
+	-- Exclude all folders in Platform, since we'll add them per platform
+	removefiles { "%{prj.name}/src/Platform/**" }
+
 	defines
 	{
-		"_CRT_SECURE_NO_WARNINGS"
+		"_CRT_SECURE_NO_WARNINGS",
+		"GLFW_INCLUDE_NONE"
 	}
 
 	includedirs
@@ -73,17 +77,53 @@ project "OpenGL-Core"
 	{ 
 		"GLFW",
 		"Glad",
-		"ImGui",
-		"opengl32.lib"
+		"ImGui"
 	}
+
+	filter "system:linux"
+		pic "On"
+		systemversion "latest"
+
+		-- Add Linux-specific files
+		files
+		{
+			"%{prj.name}/src/Platform/Linux/**.h",
+			"%{prj.name}/src/Platform/Linux/**.cpp"
+		}
+
+		links
+		{
+			"Xrandr",
+			"Xi",
+			"GLEW",
+			"GLU",
+			"GL",
+			"X11"
+		}
+
+ 		defines
+		{
+			"GLCORE_PLATFORM_LINUX"
+		}
 
 	filter "system:windows"
 		systemversion "latest"
 
+		-- Add Windows-specific files
+		files
+		{
+			"%{prj.name}/src/Platform/Windows/**.h",
+			"%{prj.name}/src/Platform/Windows/**.cpp"
+		}
+
+		links
+		{
+			"opengl32.lib"
+		}
+
 		defines
 		{
-			"GLCORE_PLATFORM_WINDOWS",
-			"GLFW_INCLUDE_NONE"
+			"GLCORE_PLATFORM_WINDOWS"
 		}
 
 	filter "configurations:Debug"
@@ -127,6 +167,24 @@ project "OpenGL-Sandbox"
 		"OpenGL-Core"
 	}
 
+	filter "system:linux"
+	systemversion "latest"
+
+		defines
+		{
+			"GLCORE_PLATFORM_LINUX"
+		}
+
+		links
+		{
+			"GLFW",
+			"Glad",
+			"ImGui",
+			"X11",
+			"pthread",
+			"dl"
+		}
+
 	filter "system:windows"
 		systemversion "latest"
 
@@ -143,4 +201,4 @@ project "OpenGL-Sandbox"
 	filter "configurations:Release"
 		defines "GLCORE_RELEASE"
 		runtime "Release"
-        optimize "on"
+		optimize "on"
