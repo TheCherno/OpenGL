@@ -53,9 +53,6 @@ project "OpenGL-Core"
 		"%{prj.name}/vendor/glm/glm/**.inl",
 	}
 
-	-- Exclude all folders in Platform, since we'll add them per platform
-	removefiles { "%{prj.name}/src/Platform/**" }
-
 	defines
 	{
 		"_CRT_SECURE_NO_WARNINGS",
@@ -84,13 +81,6 @@ project "OpenGL-Core"
 		pic "On"
 		systemversion "latest"
 
-		-- Add Linux-specific files
-		files
-		{
-			"%{prj.name}/src/Platform/Linux/**.h",
-			"%{prj.name}/src/Platform/Linux/**.cpp"
-		}
-
 		links
 		{
 			"Xrandr",
@@ -108,13 +98,6 @@ project "OpenGL-Core"
 
 	filter "system:windows"
 		systemversion "latest"
-
-		-- Add Windows-specific files
-		files
-		{
-			"%{prj.name}/src/Platform/Windows/**.h",
-			"%{prj.name}/src/Platform/Windows/**.cpp"
-		}
 
 		links
 		{
