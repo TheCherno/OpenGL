@@ -19,6 +19,9 @@ namespace GLCore {
 
 		void Begin();
 		void End();
+
+		virtual void OnEvent(Event& event);
+		bool OnMouseButtonPressed(MouseButtonPressedEvent& e);
 	private:
 		float m_Time = 0.0f;
 	};

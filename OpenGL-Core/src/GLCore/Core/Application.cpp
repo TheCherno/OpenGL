@@ -13,7 +13,7 @@ namespace GLCore {
 
 	Application* Application::s_Instance = nullptr;
 
-	Application::Application()
+	Application::Application(const std::string& name, uint32_t width, uint32_t height)
 	{
 		if (!s_Instance)
 		{
@@ -24,7 +24,7 @@ namespace GLCore {
 		GLCORE_ASSERT(!s_Instance, "Application already exists!");
 		s_Instance = this;
 
-		m_Window = std::unique_ptr<Window>(Window::Create());
+		m_Window = std::unique_ptr<Window>(Window::Create({ name, width, height }));
 		m_Window->SetEventCallback(BIND_EVENT_FN(OnEvent));
 
 		// Renderer::Init();
