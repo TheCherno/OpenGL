@@ -1,6 +1,6 @@
 -- OpenGL-Sandbox
 workspace "OpenGL-Sandbox"
-	architecture "x64"
+	architecture "x86_64"
 	startproject "OpenGL-Sandbox"
 
 	configurations
@@ -37,7 +37,7 @@ include "OpenGL-Sandbox"
 -- OpenGL-Examples
 workspace "OpenGL-Examples"
     startproject "OpenGL-Examples"
-    architecture "x64"
+    architecture "x86_64"
     startproject "OpenGL-Examples"
 
     configurations
