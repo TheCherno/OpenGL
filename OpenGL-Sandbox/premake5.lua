@@ -46,7 +46,6 @@ project "OpenGL-Sandbox"
 			"ImGui",
 			"Xrandr",
 			"Xi",
-			"GLEW",
 			"GLU",
 			"GL",
 			"X11",

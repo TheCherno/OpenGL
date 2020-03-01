@@ -70,7 +70,6 @@ project "OpenGL-Core"
 		{
 			"Xrandr",
 			"Xi",
-			"GLEW",
 			"GLU",
 			"GL",
 			"X11"
