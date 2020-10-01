@@ -1,4 +1,4 @@
-# OpenGL-Core
+# OpenGL-Core - Graphics lib
 Work-in-progress OpenGL library that aims to provide a powerful sandbox for you to learn or experiment with OpenGL, and graphics programming in general.
 
 ## Usage
