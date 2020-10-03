@@ -18,7 +18,7 @@ outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 -- Include directories relative to OpenGL-Core
 IncludeDir = {}
-IncludeDir["GLFW"] = "vendor/GLFW/include"
+IncludeDir["GLFW"] = "vendor/glfw/include"
 IncludeDir["Glad"] = "vendor/Glad/include"
 IncludeDir["ImGui"] = "vendor/imgui"
 IncludeDir["glm"] = "vendor/glm"
@@ -26,7 +26,7 @@ IncludeDir["stb_image"] = "vendor/stb_image"
 
 -- Projects
 group "Dependencies"
-	include "OpenGL-Core/vendor/GLFW"
+	include "OpenGL-Core/vendor/glfw"
 	include "OpenGL-Core/vendor/Glad"
 	include "OpenGL-Core/vendor/imgui"
 group ""
@@ -55,7 +55,7 @@ outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 -- Include directories relative to OpenGL-Core
 IncludeDir = {}
-IncludeDir["GLFW"] = "vendor/GLFW/include"
+IncludeDir["GLFW"] = "vendor/glfw/include"
 IncludeDir["Glad"] = "vendor/Glad/include"
 IncludeDir["ImGui"] = "vendor/imgui"
 IncludeDir["glm"] = "vendor/glm"
@@ -63,7 +63,7 @@ IncludeDir["stb_image"] = "vendor/stb_image"
 
 -- Projects
 group "Dependencies"
-    includeexternal "OpenGL-Core/vendor/GLFW"
+    includeexternal "OpenGL-Core/vendor/glfw"
     includeexternal "OpenGL-Core/vendor/Glad"
     includeexternal "OpenGL-Core/vendor/imgui"
 group ""

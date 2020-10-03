@@ -17,6 +17,10 @@ project "Glad"
     {
         "include"
     }
+
+    filter "system:linux"
+        pic "On"
+        systemversion "latest"
     
     filter "system:windows"
         systemversion "latest"

@@ -36,6 +36,28 @@ project "OpenGL-Sandbox"
 			"GLCORE_PLATFORM_WINDOWS"
 		}
 
+	filter "system:linux"
+		systemversion "latest"
+
+		links
+		{
+			"GLFW",
+			"Glad",
+			"ImGui",
+			"Xrandr",
+			"Xi",
+			"GLU",
+			"GL",
+			"X11",
+			"dl",
+			"pthread",
+		}
+
+ 		defines
+		{
+			"GLCORE_PLATFORM_LINUX"
+		}
+
 	filter "configurations:Debug"
 		defines "GLCORE_DEBUG"
 		runtime "Debug"
@@ -44,4 +66,4 @@ project "OpenGL-Sandbox"
 	filter "configurations:Release"
 		defines "GLCORE_RELEASE"
 		runtime "Release"
-        optimize "on"
+		optimize "on"

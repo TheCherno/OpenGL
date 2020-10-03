@@ -22,7 +22,8 @@ project "OpenGL-Core"
 
 	defines
 	{
-		"_CRT_SECURE_NO_WARNINGS"
+		"_CRT_SECURE_NO_WARNINGS",
+		"GLFW_INCLUDE_NONE"
 	}
 
 	includedirs
@@ -40,8 +41,7 @@ project "OpenGL-Core"
 	{ 
 		"GLFW",
 		"Glad",
-		"ImGui",
-		"opengl32.lib"
+		"ImGui"
 	}
 
 	filter "system:windows"
@@ -49,8 +49,30 @@ project "OpenGL-Core"
 
 		defines
 		{
-			"GLCORE_PLATFORM_WINDOWS",
-			"GLFW_INCLUDE_NONE"
+			"GLCORE_PLATFORM_WINDOWS"
+		}
+
+		links
+		{
+			"opengl32.lib"
+		}
+
+	filter "system:linux"
+		pic "On"
+		systemversion "latest"
+
+		defines
+		{
+			"GLCORE_PLATFORM_LINUX"
+		}
+
+		links
+		{
+			"Xrandr",
+			"Xi",
+			"GLU",
+			"GL",
+			"X11"
 		}
 
 	filter "configurations:Debug"

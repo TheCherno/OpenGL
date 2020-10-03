@@ -1,13 +1,18 @@
 # Directories
 **bin/
 **bin-int/
+!/vendor/bin
+run/
 
 # Files
 *.user
 *imgui.ini
+Makefile
+*.make
 
 # Visual Studio
 .vs/
+.vscode/
 *.sln
 *.vcxproj
 *.vcxproj.filters
