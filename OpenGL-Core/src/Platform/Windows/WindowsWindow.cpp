@@ -42,6 +42,19 @@ namespace GLCore {
 		{
 			int success = glfwInit();
 			GLCORE_ASSERT(success, "Could not intialize GLFW!");
+
+            #ifdef __APPLE__
+                // GL 3.3 + GLSL 150
+                const char* glsl_version = "#version 150";
+                glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+                glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+                glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+                glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+            #else
+                        // GLSL 130
+                const char* glsl_version = "#version 130";
+            #endif
+
 			glfwSetErrorCallback(GLFWErrorCallback);
 			s_GLFWInitialized = true;
 		}

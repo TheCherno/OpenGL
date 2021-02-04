@@ -1,4 +1,4 @@
-#version 450 core
+#version 410 core
 
 layout (location = 0) out vec4 o_Color;
 
