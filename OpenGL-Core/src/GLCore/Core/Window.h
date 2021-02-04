@@ -1,6 +1,6 @@
 #pragma once
 
-#include "glpch.h"
+//#include "glpch.h"
 
 #include "GLCore/Core/Core.h"
 #include "GLCore/Events/Event.h"
