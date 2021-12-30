@@ -269,8 +269,8 @@ vec3 get_color(int i)
 }
 	)").AddUniform("colorMult", { 1, 300 }, 200));
 
-	m_center = { -0.74656412896773705068, 0.09886581010775417899 };
-	m_radius = 8.2212188006580699331e-12;
+	//m_center = { -0.74656412896773705068, 0.09886581010775417899 };
+	//m_radius = 8.2212188006580699331e-12;
 }
 
 FractalLayer::~FractalLayer()
@@ -551,7 +551,7 @@ void FractalLayer::OnUpdate(Timestep ts)
 
 void FractalLayer::OnImGuiRender()
 {
-	ImGui::ShowDemoWindow();
+	//ImGui::ShowDemoWindow();
 
 	ImGui::Begin("Controls");
 
@@ -566,14 +566,12 @@ void FractalLayer::OnImGuiRender()
 		m_frame = 0;
 	}
 
-	//if (ImGui::InputFloat2("Center", glm::value_ptr(m_center), "%e"));
 	double cmin = -2, cmax = 2;
-	if (ImGui::DragScalarN("Center", ImGuiDataType_Double, glm::value_ptr(m_center), 2, m_radius / 20.0, &cmin, &cmax, "%.20f"))
+	if (ImGui::DragScalarN("Center", ImGuiDataType_Double, glm::value_ptr(m_center), 2, (float)m_radius / 20.f, &cmin, &cmax, "%.20f"))
 		UpdateRange();
 
-	//if (ImGui::InputDouble("Radius", &m_radius, 0.0, 0.0, "%e"))
 	double rmin = 0, rmax = 5;
-	if (ImGui::DragScalar("Radius", ImGuiDataType_Double, &m_radius, 1e-2, &rmin, &rmax, "%e", 10.f))
+	if (ImGui::DragScalar("Radius", ImGuiDataType_Double, &m_radius, 1e-2f, &rmin, &rmax, "%e", 10.f))
 		UpdateRange();
 
 	ImGui::Spacing();
