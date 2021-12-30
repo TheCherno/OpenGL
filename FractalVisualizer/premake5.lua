@@ -1,4 +1,4 @@
-project "OpenGL-Sandbox"
+project "FractalVisualizer"
 	kind "ConsoleApp"
 	language "C++"
 	cppdialect "C++17"
