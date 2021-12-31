@@ -1,4 +1,4 @@
-//#version 400 core
+#version 400 core
 
 layout (location = 0) out vec4 o_Color;
 
@@ -14,6 +14,8 @@ uniform dvec2 yRange;
 uniform uint itersPerFrame;
 uniform uint frame;
 
+#color
+
 double map(double value, double inputMin, double inputMax, double outputMin, double outputMax)
 {
     return outputMin + ((outputMax - outputMin) / (inputMax - inputMin)) * (value - inputMin);
@@ -23,7 +25,7 @@ double rand(float s) {
     return fract(sin(s * 12.9898) * 43758.5453);
 }
 
-void main()
+void mandelbrot()
 {
     uvec2 iter_data = texture(i_Iter, gl_FragCoord.xy / size).xy;
     uint iter = iter_data.x;
@@ -76,4 +78,9 @@ void main()
         o_Iter = uvec2(iter + 1, 0);
         o_Color = vec4(get_color(int(total_iters) + i).xyz, 1.0 / float(iter + 1));
     }
+}
+
+void main()
+{
+    mandelbrot();
 }

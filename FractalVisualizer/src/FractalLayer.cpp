@@ -5,14 +5,13 @@
 #include <GLCore/Core/MouseButtonCodes.h>
 
 #include <fstream>
-#include <streambuf>
 #include <iomanip>
 
 using namespace GLCore;
 using namespace GLCore::Utils;
 
 
-static GLuint CreateShader(const std::string& source)
+GLuint CreateShader(const std::string& source)
 {
 	GLuint program = glCreateProgram();
 
@@ -172,18 +171,20 @@ void FractalLayer::CreateFrameBuffer()
 
 void FractalLayer::SetColorFunc(const ColorFunction& colorFunc)
 {
-	std::stringstream ss;
-	ss << "#version 400\n\n";
-	for (const auto& u : colorFunc.GetUniforms())
-		ss << "uniform float " << u.name << ";\n";
-
-	ss << colorFunc.GetSource() << '\n';
-	ss << m_coreShaderSrc;
+	std::string source = m_coreShaderSrc;
+	size_t color_loc = source.find("#color");
+	if (color_loc == std::string::npos)
+	{
+		std::cout << "ERROR: Shader does not have '#color'";
+		exit(EXIT_FAILURE);
+	}
+	source.erase(color_loc, 6);
+	source.insert(color_loc, colorFunc.GetSource());
 
 	if (m_Shader)
 		glDeleteProgram(m_Shader);
 
-	m_Shader = CreateShader(ss.str());
+	m_Shader = CreateShader(source);
 	glUseProgram(m_Shader);
 
 	for (const auto& u : colorFunc.GetUniforms())
@@ -213,6 +214,7 @@ FractalLayer::FractalLayer()
 	m_coreShaderSrc = std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
 	m_colors.push_back(ColorFunction(R"(
+#uniform colorMult 200 1 NULL;
 vec3 colors[] = vec3[](
 	vec3(0, 0, 0),
 	vec3(0.13, 0.142, 0.8),
@@ -235,9 +237,10 @@ vec3 get_color(int iters)
     float t = mod(x, 1);
     return mix(colors[i], colors[i+1], t);
 }
-	)").AddUniform("colorMult", { 1, 300 }, 200));
+	)"));
 
 	m_colors.push_back(ColorFunction(R"(
+#uniform colorMult 1000 1 NULL;
 vec3 hsv2rgb(vec3 c)
 {
     vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
@@ -249,17 +252,19 @@ vec3 get_color(int i)
 {
     return hsv2rgb(vec3(i / colorMult, 1, 1));
 }
-	)").AddUniform("colorMult", { 1.1f, 5000 }, 1000));
+	)"));
 
 	m_colors.push_back(ColorFunction(R"(
+#uniform colorMult 200 1 NULL;
 vec3 get_color(int i)
 {
     float t = exp(-i / colorMult);
     return mix(vec3(1, 1, 1), vec3(0.1, 0.1, 1), t);
 }
-	)").AddUniform("colorMult", { 1, 1000 }, 200));
+	)"));
 
 	m_colors.push_back(ColorFunction(R"(
+#uniform colorMult 200 1 NULL;
 vec3 get_color(int i)
 {
     float x = i / colorMult;
@@ -267,7 +272,7 @@ vec3 get_color(int i)
     float n2 = cos(x) * 0.5 + 0.5;
     return vec3(n1, n2, 1.0) * 1;
 }
-	)").AddUniform("colorMult", { 1, 300 }, 200));
+	)"));
 
 	//m_center = { -0.74656412896773705068, 0.09886581010775417899 };
 	//m_radius = 8.2212188006580699331e-12;
@@ -305,82 +310,6 @@ void FractalLayer::OnAttach()
 		glCreateBuffers(1, &m_QuadIB);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_QuadIB);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-	}
-
-	// Create colors previews
-	glm::uvec2 m_previewSize = { 100, 50 };
-	for (auto& cf : m_colors)
-	{
-		GLuint fb;
-		glGenFramebuffers(1, &fb);
-		glBindFramebuffer(GL_FRAMEBUFFER, fb);
-
-		GLuint tex;
-		glGenTextures(1, &tex);
-		glBindTexture(GL_TEXTURE_2D, tex);
-
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_previewSize.x, m_previewSize.y, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
-		GLenum buffers[] = { GL_COLOR_ATTACHMENT0 };
-		glDrawBuffers(1, buffers);
-
-		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		{
-			std::cout << "NOT TOTOTOTOTOT\n";
-			exit(EXIT_FAILURE);
-		}
-
-		glViewport(0, 0, m_previewSize.x, m_previewSize.y);
-
-		std::stringstream ss;
-
-		ss << "#version 400\n\n";
-		for (const auto& u : cf.GetUniforms())
-			ss << "uniform float " << u.name << ";\n";
-
-		ss << cf.GetSource() << '\n';
-		ss << R"(
-layout (location = 0) out vec3 outColor;
-
-uniform uint range;
-uniform uvec2 size;
-
-void main()
-{
-    int i = int((gl_FragCoord.x / size.x) * range);
-    outColor = get_color(i);
-	//outColor = vec3(sin((gl_FragCoord.x / size.x) * range), 0, 0);
-}
-		)";
-
-		GLuint shader = CreateShader(ss.str());
-		glUseProgram(shader);
-
-		GLint loc = glGetUniformLocation(shader, "range");
-		glUniform1ui(loc, 1000);
-
-		loc = glGetUniformLocation(shader, "size");
-		glUniform2ui(loc, m_previewSize.x, m_previewSize.y);
-
-		for (const auto& u : cf.GetUniforms())
-		{
-			loc = glGetUniformLocation(shader, u.name.c_str());
-			glUniform1f(loc, u.default_val);
-		}
-
-		glBindFramebuffer(GL_FRAMEBUFFER, fb);
-
-		glBindVertexArray(m_QuadVA);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-
-		glDeleteFramebuffers(1, &fb);
-		glDeleteProgram(shader);
-
-		cf.preview = (ImTextureID)(intptr_t)tex; // Fist cast to 'intptr_t' to avoid warning
 	}
 
 	CreateFrameBuffer();
@@ -425,49 +354,54 @@ void FractalLayer::OnEvent(Event& event)
 			return false;
 		}
 	);
-	dispatcher.Dispatch<MouseButtonPressedEvent>(
-		[&](MouseButtonPressedEvent& e)
-		{
-			if (e.GetMouseButton() == HZ_MOUSE_BUTTON_LEFT)
+
+	ImGuiIO& io = ImGui::GetIO();
+	if (!io.WantCaptureMouse)
+	{
+		dispatcher.Dispatch<MouseButtonPressedEvent>(
+			[&](MouseButtonPressedEvent& e)
 			{
-				m_mousePressed = true;
-				m_startPos.x = Input::GetMouseX();
-				m_startPos.y = Input::GetMouseY();
+				if (e.GetMouseButton() == HZ_MOUSE_BUTTON_LEFT)
+				{
+					m_mousePressed = true;
+					m_startPos.x = Input::GetMouseX();
+					m_startPos.y = Input::GetMouseY();
+				}
+				return false;
 			}
-			return false;
-		}
-	);
-	dispatcher.Dispatch<MouseButtonReleasedEvent>(
-		[&](MouseButtonReleasedEvent& e)
-		{
-			if (e.GetMouseButton() == HZ_MOUSE_BUTTON_LEFT)
+		);
+		dispatcher.Dispatch<MouseButtonReleasedEvent>(
+			[&](MouseButtonReleasedEvent& e)
 			{
-				m_mousePressed = false;
+				if (e.GetMouseButton() == HZ_MOUSE_BUTTON_LEFT)
+				{
+					m_mousePressed = false;
+				}
+				return false;
 			}
-			return false;
-		}
-	);
-	dispatcher.Dispatch<MouseScrolledEvent>(
-		[&](MouseScrolledEvent& e)
-		{
-			m_radius /= std::pow(1.1f, e.GetYOffset());
+		);
+		dispatcher.Dispatch<MouseScrolledEvent>(
+			[&](MouseScrolledEvent& e)
+			{
+				m_radius /= std::pow(1.1f, e.GetYOffset());
 
-			// Zoom where the mouse is
-			glm::dvec2 iMousePos = MapCoordsToPos({ Input::GetMouseX(), Input::GetMouseY() });
+				// Zoom where the mouse is
+				glm::dvec2 iMousePos = MapCoordsToPos({ Input::GetMouseX(), Input::GetMouseY() });
 
-			UpdateRange();
+				UpdateRange();
 
-			glm::dvec2 fMousePos = MapCoordsToPos({ Input::GetMouseX(), Input::GetMouseY() });
+				glm::dvec2 fMousePos = MapCoordsToPos({ Input::GetMouseX(), Input::GetMouseY() });
 
-			glm::dvec2 delta = fMousePos - iMousePos;
+				glm::dvec2 delta = fMousePos - iMousePos;
 
-			m_center -= delta;
+				m_center -= delta;
 
-			UpdateRange();
+				UpdateRange();
 
-			return false;
-		}
-	);
+				return false;
+			}
+		);
+	}
 }
 
 void FractalLayer::OnUpdate(Timestep ts)
