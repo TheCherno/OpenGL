@@ -3,14 +3,12 @@ workspace "FractalVisualizer"
 	architecture "x64"
 	startproject "FractalVisualizer"
 
-	configurations
-	{
+	configurations {
 		"Debug",
 		"Release"
 	}
 	
-	flags
-	{
+	flags {
 		"MultiProcessorCompile"
 	}
 

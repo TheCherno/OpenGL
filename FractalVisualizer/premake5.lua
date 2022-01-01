@@ -7,14 +7,12 @@ project "FractalVisualizer"
 	targetdir ("../bin/" .. outputdir .. "/%{prj.name}")
 	objdir ("../bin-int/" .. outputdir .. "/%{prj.name}")
 
-	files
-	{
+	files {
 		"src/**.h",
 		"src/**.cpp"
 	}
 
-	includedirs
-	{
+	includedirs {
 		"../OpenGL-Core/vendor/spdlog/include",
 		"../OpenGL-Core/src",
 		"../OpenGL-Core/vendor",
@@ -23,16 +21,18 @@ project "FractalVisualizer"
 		"../OpenGL-Core/%{IncludeDir.ImGui}"
 	}
 
-	links
-	{
+	links {
 		"OpenGL-Core"
+	}
+
+	postbuildcommands {
+		"{COPYDIR} ./assets %{cfg.targetdir}"
 	}
 
 	filter "system:windows"
 		systemversion "latest"
 
-		defines
-		{
+		defines {
 			"GLCORE_PLATFORM_WINDOWS"
 		}
 

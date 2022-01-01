@@ -1,4 +1,4 @@
-#include "FractalLayer.h"
+﻿#include "FractalLayer.h"
 
 #include <GLCore/Core/Input.h>
 #include <GLCore/Core/KeyCodes.h>
@@ -6,65 +6,26 @@
 
 #include <fstream>
 #include <iomanip>
+#include <filesystem>
 
 using namespace GLCore;
 using namespace GLCore::Utils;
 
 
-GLuint CreateShader(const std::string& source)
+static void HelpMarker(const char* desc)
 {
-	GLuint program = glCreateProgram();
-
-	GLuint shader = glCreateShader(GL_FRAGMENT_SHADER);
-	const char* src = source.c_str();
-
-	glShaderSource(shader, 1, &src, nullptr);
-	glCompileShader(shader);
-
-	GLint isCompiled = 0;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &isCompiled);
-	if (isCompiled == GL_FALSE)
+	ImGui::TextDisabled("(?)");
+	if (ImGui::IsItemHovered())
 	{
-		GLint maxLength = 0;
-		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
-
-		std::vector<GLchar> infoLog(maxLength);
-		glGetShaderInfoLog(shader, maxLength, &maxLength, &infoLog[0]);
-
-		glDeleteShader(shader);
-
-		LOG_ERROR("{0}", infoLog.data());
+		ImGui::BeginTooltip();
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+		ImGui::TextUnformatted(desc);
+		ImGui::PopTextWrapPos();
+		ImGui::EndTooltip();
 	}
-
-	glAttachShader(program, shader);
-
-	// Link
-	glLinkProgram(program);
-
-	GLint isLinked = 0;
-	glGetProgramiv(program, GL_LINK_STATUS, (int*)&isLinked);
-	if (isLinked == GL_FALSE)
-	{
-		GLint maxLength = 0;
-		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &maxLength);
-
-		std::vector<GLchar> infoLog(maxLength);
-		glGetProgramInfoLog(program, maxLength, &maxLength, &infoLog[0]);
-
-		glDeleteProgram(program);
-
-		glDeleteShader(shader);
-
-		LOG_ERROR("{0}", infoLog.data());
-	}
-
-	glDetachShader(program, shader);
-	glDeleteShader(shader);
-
-	return program;
 }
 
-double map(const double& value, const double& inputMin, const double& inputMax, const double& outputMin, const double& outputMax)
+static double map(const double& value, const double& inputMin, const double& inputMax, const double& outputMin, const double& outputMax)
 {
 	return outputMin + ((outputMax - outputMin) / (inputMax - inputMin)) * (value - inputMin);
 }
@@ -105,10 +66,17 @@ void FractalLayer::UpdateRange()
 	m_frame = 0;
 }
 
-void FractalLayer::CreateFrameBuffer()
+void FractalLayer::CleanOpenGL()
 {
 	glDeleteFramebuffers(1, &m_FrameBuffer);
-	glDeleteTextures(1, &m_Texture);
+
+	GLuint textures[] = { m_Texture, m_InData, m_OutData, m_InIter, m_OutIter };
+	glDeleteTextures(IM_ARRAYSIZE(textures), textures);
+}
+
+void FractalLayer::CreateFrameBuffer()
+{
+	CleanOpenGL();
 
 	glGenFramebuffers(1, &m_FrameBuffer);
 	glBindFramebuffer(GL_FRAMEBUFFER, m_FrameBuffer);
@@ -137,14 +105,12 @@ void FractalLayer::CreateFrameBuffer()
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_FrameBuffer);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, m_OutData, 0);
 
-
 	// In Data
 	glGenTextures(1, &m_InData);
 	glBindTexture(GL_TEXTURE_2D, m_InData);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32UI, m_size.x, m_size.y, 0, GL_RGBA_INTEGER, GL_UNSIGNED_INT, nullptr);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
 
 	// Out Iter
 	glGenTextures(1, &m_OutIter);
@@ -165,8 +131,11 @@ void FractalLayer::CreateFrameBuffer()
 
 	GLenum bufs[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
 	glDrawBuffers(3, bufs);
-
-	glViewport(0, 0, m_size.x, m_size.y);
+	
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+	{
+		std::cout << "Error creating framebuffer\n";
+	}
 }
 
 void FractalLayer::SetColorFunc(const ColorFunction& colorFunc)
@@ -202,6 +171,22 @@ void FractalLayer::SetColorFunc(const ColorFunction& colorFunc)
 	UpdateRange();
 }
 
+void FractalLayer::RefreshColorFunctions()
+{
+	m_colors.clear();
+	m_colors.reserve(10);
+	for (const auto& path : std::filesystem::directory_iterator("assets/colors"))
+	{
+		std::ifstream colorSrc(path.path());
+		m_colors.emplace_back(std::string((std::istreambuf_iterator<char>(colorSrc)), std::istreambuf_iterator<char>()));
+	}
+
+	if (m_selectedColor >= m_colors.size())
+		m_selectedColor = 0;
+
+	SetColorFunc(m_colors[m_selectedColor]);
+}
+
 FractalLayer::FractalLayer()
 	: m_radius(2)
 	, m_center(0, 0)
@@ -213,74 +198,8 @@ FractalLayer::FractalLayer()
 	std::ifstream file("assets/mandelbrot.glsl");
 	m_coreShaderSrc = std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
-	m_colors.push_back(ColorFunction(R"(
-#uniform colorMult 200 1 NULL;
-vec3 colors[] = vec3[](
-	vec3(0, 0, 0),
-	vec3(0.13, 0.142, 0.8),
-	vec3(1, 1, 1),
-	vec3(1, 0.667, 0),
-	vec3(0, 0, 0)
-);
-vec3 get_color(int iters)
-{
-	float x  = iters / colorMult;
-    x = mod(x, colors.length() - 1);
-
-    if (x == colors.length())
-        x = 0;
-
-    if (floor(x) == x)
-        return colors[int(x)];
-
-    int i = int(floor(x));
-    float t = mod(x, 1);
-    return mix(colors[i], colors[i+1], t);
-}
-	)"));
-
-	m_colors.push_back(ColorFunction(R"(
-#uniform colorMult 1000 1 NULL;
-vec3 hsv2rgb(vec3 c)
-{
-    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
-    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
-}
-
-vec3 get_color(int i)
-{
-    return hsv2rgb(vec3(i / colorMult, 1, 1));
-}
-	)"));
-
-	m_colors.push_back(ColorFunction(R"(
-#uniform colorMult 200 1 NULL;
-vec3 get_color(int i)
-{
-    float t = exp(-i / colorMult);
-    return mix(vec3(1, 1, 1), vec3(0.1, 0.1, 1), t);
-}
-	)"));
-
-	m_colors.push_back(ColorFunction(R"(
-#uniform colorMult 200 1 NULL;
-vec3 get_color(int i)
-{
-    float x = i / colorMult;
-    float n1 = sin(x) * 0.5 + 0.5;
-    float n2 = cos(x) * 0.5 + 0.5;
-    return vec3(n1, n2, 1.0) * 1;
-}
-	)"));
-
 	//m_center = { -0.74656412896773705068, 0.09886581010775417899 };
 	//m_radius = 8.2212188006580699331e-12;
-}
-
-FractalLayer::~FractalLayer()
-{
-
 }
 
 void FractalLayer::OnAttach()
@@ -312,16 +231,18 @@ void FractalLayer::OnAttach()
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 	}
 
+
 	CreateFrameBuffer();
 
-	SetColorFunc(m_colors[m_selectedColor]);
+	RefreshColorFunctions();
 
-	glUseProgram(m_Shader);
 	UpdateRange();
 }
 
 void FractalLayer::OnDetach()
 {
+	CleanOpenGL();
+
 	glDeleteVertexArrays(1, &m_QuadVA);
 	glDeleteBuffers(1, &m_QuadVB);
 	glDeleteBuffers(1, &m_QuadIB);
@@ -336,19 +257,7 @@ void FractalLayer::OnEvent(Event& event)
 			m_size.x = e.GetWidth();
 			m_size.y = e.GetHeight();
 
-			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			glViewport(0, 0, m_size.x, m_size.y);
-
-			glDeleteFramebuffers(1, &m_FrameBuffer);
-			glDeleteTextures(1, &m_Texture);
-
 			CreateFrameBuffer();
-
-			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-			{
-				std::cout << "Error creating framebuffer\n";
-			}
-
 			UpdateRange();
 
 			return false;
@@ -408,6 +317,12 @@ void FractalLayer::OnUpdate(Timestep ts)
 {
 	frame_rate = 1 / ts.GetSeconds();
 
+	if (m_shouldRefreshColors)
+	{
+		RefreshColorFunctions();
+		m_shouldRefreshColors = false;
+	}
+
 	if (m_mousePressed)
 	{
 		glm::dvec2 mousePos = MapCoordsToPos({ Input::GetMouseX(), Input::GetMouseY() });
@@ -424,17 +339,7 @@ void FractalLayer::OnUpdate(Timestep ts)
 		}
 	}
 
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_FrameBuffer);
-
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	if (m_frame == 0)
-	{
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	}
-
+	// Shader uniforms
 	glUseProgram(m_Shader);
 	GLint location;
 
@@ -459,9 +364,24 @@ void FractalLayer::OnUpdate(Timestep ts)
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, m_InIter);
 
+	// Draw
+	glViewport(0, 0, m_size.x, m_size.y);
+	glBindFramebuffer(GL_FRAMEBUFFER, m_FrameBuffer);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	if (m_frame == 0)
+	{
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	}
+
 	glBindVertexArray(m_QuadVA);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
+
+	// Copy output buffers into input buffers
 	glCopyImageSubData(
 		m_OutData, GL_TEXTURE_2D, 0, 0, 0, 0,
 		m_InData, GL_TEXTURE_2D, 0, 0, 0, 0,
@@ -485,7 +405,7 @@ void FractalLayer::OnUpdate(Timestep ts)
 
 void FractalLayer::OnImGuiRender()
 {
-	//ImGui::ShowDemoWindow();
+	ImGui::ShowDemoWindow();
 
 	ImGui::Begin("Controls");
 
@@ -504,13 +424,23 @@ void FractalLayer::OnImGuiRender()
 	if (ImGui::DragScalarN("Center", ImGuiDataType_Double, glm::value_ptr(m_center), 2, (float)m_radius / 20.f, &cmin, &cmax, "%.20f"))
 		UpdateRange();
 
-	double rmin = 0, rmax = 5;
+	double rmin = 1e-15, rmax = 5;
 	if (ImGui::DragScalar("Radius", ImGuiDataType_Double, &m_radius, 1e-2f, &rmin, &rmax, "%e", 10.f))
 		UpdateRange();
 
 	ImGui::Spacing();
+	ImGui::AlignTextToFramePadding();
 	ImGui::Text("Color function");
+	ImGui::SameLine();
+
 	ImGuiStyle& style = ImGui::GetStyle();
+	float lineHeight = ImGui::GetFontSize() + style.FramePadding.y * 2.0f;
+	if (ImGui::Button("Refresh"))
+	//if (ImGui::Button("+", ImVec2{ lineHeight, lineHeight }))
+		m_shouldRefreshColors = true;
+
+	ImGui::SameLine(); HelpMarker("Edit the files (or add) in the 'assets/colors' folder and they will appear here after a refresh");
+
 	ImVec2 button_size = { 100, 50 };
 	float window_visible_x2 = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
 	for (size_t i = 0; i < m_colors.size(); i++)
@@ -522,7 +452,7 @@ void FractalLayer::OnImGuiRender()
 		else
 			ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_Button]);
 
-		if (ImGui::ImageButton(m_colors[i].preview, button_size))
+		if (ImGui::ImageButton(m_colors[i].GetPreview(), button_size))
 		{
 			m_selectedColor = i;
 			SetColorFunc(m_colors[m_selectedColor]);

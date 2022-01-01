@@ -10,8 +10,7 @@ project "OpenGL-Core"
 	pchheader "glpch.h"
 	pchsource "src/glpch.cpp"
 
-	files
-	{
+	files {
 		"src/**.h",
 		"src/**.cpp",
 		"vendor/stb_image/**.h",
@@ -20,13 +19,11 @@ project "OpenGL-Core"
 		"vendor/glm/glm/**.inl",
 	}
 
-	defines
-	{
+	defines {
 		"_CRT_SECURE_NO_WARNINGS"
 	}
 
-	includedirs
-	{
+	includedirs {
 		"src",
 		"vendor/spdlog/include",
 		"%{IncludeDir.GLFW}",
@@ -36,8 +33,7 @@ project "OpenGL-Core"
 		"%{IncludeDir.stb_image}"
 	}
 
-	links 
-	{ 
+	links { 
 		"GLFW",
 		"Glad",
 		"ImGui",
@@ -47,8 +43,7 @@ project "OpenGL-Core"
 	filter "system:windows"
 		systemversion "latest"
 
-		defines
-		{
+		defines {
 			"GLCORE_PLATFORM_WINDOWS",
 			"GLFW_INCLUDE_NONE"
 		}
