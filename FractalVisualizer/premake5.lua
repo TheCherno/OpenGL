@@ -26,7 +26,7 @@ project "FractalVisualizer"
 	}
 
 	postbuildcommands {
-		"{COPYDIR} ./assets %{cfg.targetdir}"
+		"{COPYDIR} ./assets %{cfg.targetdir}/assets"
 	}
 
 	filter "system:windows"

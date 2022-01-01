@@ -21,7 +21,8 @@ double map(double value, double inputMin, double inputMax, double outputMin, dou
     return outputMin + ((outputMax - outputMin) / (inputMax - inputMin)) * (value - inputMin);
 }
 
-double rand(float s) {
+double rand(float s) 
+{
     return fract(sin(s * 12.9898) * 43758.5453);
 }
 

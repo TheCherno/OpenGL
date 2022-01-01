@@ -405,7 +405,7 @@ void FractalLayer::OnUpdate(Timestep ts)
 
 void FractalLayer::OnImGuiRender()
 {
-	ImGui::ShowDemoWindow();
+	//ImGui::ShowDemoWindow();
 
 	ImGui::Begin("Controls");
 
@@ -416,7 +416,8 @@ void FractalLayer::OnImGuiRender()
 
 	if (ImGui::DragInt("Iterations per frame", (int*)&m_itersPerFrame, 10, 1, 2000))
 	{
-		if (m_itersPerFrame < 0) m_itersPerFrame = 1;
+		if (m_itersPerFrame < 0) 
+			m_itersPerFrame = 1;
 		m_frame = 0;
 	}
 
