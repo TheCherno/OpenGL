@@ -20,7 +20,6 @@ IncludeDir["GLFW"] = "vendor/GLFW/include"
 IncludeDir["Glad"] = "vendor/Glad/include"
 IncludeDir["ImGui"] = "vendor/imgui"
 IncludeDir["glm"] = "vendor/glm"
-IncludeDir["stb_image"] = "vendor/stb_image"
 
 -- Projects
 group "Dependencies"

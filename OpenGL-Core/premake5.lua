@@ -13,8 +13,6 @@ project "OpenGL-Core"
 	files {
 		"src/**.h",
 		"src/**.cpp",
-		"vendor/stb_image/**.h",
-		"vendor/stb_image/**.cpp",
 		"vendor/glm/glm/**.hpp",
 		"vendor/glm/glm/**.inl",
 	}
@@ -29,8 +27,7 @@ project "OpenGL-Core"
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.Glad}",
 		"%{IncludeDir.ImGui}",
-		"%{IncludeDir.glm}",
-		"%{IncludeDir.stb_image}"
+		"%{IncludeDir.glm}"
 	}
 
 	links { 
