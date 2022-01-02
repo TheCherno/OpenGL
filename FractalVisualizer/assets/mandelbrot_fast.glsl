@@ -38,33 +38,38 @@ void mandelbrot()
     dvec2 screen_pos = gl_FragCoord.xy;
     dvec2 pos = screen_pos + dvec2(rand(iter), rand(iter + 1));
 
-    dvec2 c;
-    c.x = map(pos.x, 0, size.x, xRange.x, xRange.y);
-    c.y = map(pos.y, 0, size.y, yRange.x, yRange.y);
+    double x0 = map(pos.x, 0, size.x, xRange.x, xRange.y);
+    double y0 = map(pos.y, 0, size.y, yRange.x, yRange.y);
 
-    dvec2 z;
+    double x,y;
     if (frame == 0)
     {
-        z = dvec2(0, 0);
+        x = 0;
+        y = 0;
         iter = 0;
         total_iters = 0;
     }
     else
     {
         uvec4 data = texture(i_Data, gl_FragCoord.xy / size);
-        z.x = packDouble2x32(data.xy);
-        z.y = packDouble2x32(data.zw);
+        x = packDouble2x32(data.xy);
+        y = packDouble2x32(data.zw);
     }
+    double x2 = x * x;
+    double y2 = y * y;
     
     int i;
-    for (i = 0; i < itersPerFrame && z.x*z.x + z.y*z.y <= 4; i++)
+    for (i = 0; i < itersPerFrame && x2 + y2 <= 4; i++)
     {
-        z = dvec2(z.x*z.x - z.y*z.y, 2.0 * z.x*z.y) + c;
+        y = 2 * x * y + y0;
+        x = x2 - y2 + x0;
+        x2 = x * x;
+        y2 = y * y;
     }
 
     if (i == itersPerFrame)
     {
-        o_Data = uvec4(unpackDouble2x32(z.x), unpackDouble2x32(z.y));
+        o_Data = uvec4(unpackDouble2x32(x), unpackDouble2x32(y));
         o_Iter = uvec2(iter, total_iters + i);
         o_Color = vec4(0.0, 0.0, 0.0, 0.0);
     }

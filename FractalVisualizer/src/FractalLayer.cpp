@@ -195,7 +195,7 @@ FractalLayer::FractalLayer()
 	m_size.x = Application::Get().GetWindow().GetWidth();
 	m_size.y = Application::Get().GetWindow().GetHeight();
 
-	std::ifstream file("assets/mandelbrot.glsl");
+	std::ifstream file("assets/mandelbrot_fast.glsl");
 	m_coreShaderSrc = std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
 	//m_center = { -0.74656412896773705068, 0.09886581010775417899 };
