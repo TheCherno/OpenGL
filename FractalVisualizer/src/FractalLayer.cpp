@@ -425,8 +425,9 @@ void FractalLayer::OnImGuiRender()
 	if (ImGui::DragScalarN("Center", ImGuiDataType_Double, glm::value_ptr(m_center), 2, (float)m_radius / 20.f, &cmin, &cmax, "%.20f"))
 		UpdateRange();
 
-	double rmin = 1e-15, rmax = 5;
-	if (ImGui::DragScalar("Radius", ImGuiDataType_Double, &m_radius, 1e-2f, &rmin, &rmax, "%e", 10.f))
+	double rmin = 1e-15, rmax = 50;
+	static float v = 0;
+	if (ImGui::DragScalar("Radius", ImGuiDataType_Double, &m_radius, 0.01f, &rmin, &rmax, "%e", ImGuiSliderFlags_Logarithmic))
 		UpdateRange();
 
 	ImGui::Spacing();
