@@ -29,6 +29,8 @@ private:
 	void SetColorFunc(const ColorFunction& colorFunc);
 	void RefreshColorFunctions();
 
+	glm::uvec2 GetMultipliedResolution();
+
 	// Color function
 	std::vector<ColorFunction> m_colors;
 	size_t m_selectedColor = 0;
@@ -50,14 +52,17 @@ private:
 	double m_radius;
 	int m_itersPerFrame;
 	int m_frame;
+	glm::uvec2 m_size;
+	int m_resolutionPercentage = 100;
 
 	glm::dvec2 m_xRange;
 	glm::dvec2 m_yRange;
 
 	// Window and iteraction
-	glm::uvec2 m_size;
+	glm::uvec2 m_screenSize;
 	bool m_mousePressed = false;
 	glm::dvec2 m_startPos;
+	bool m_minimized = false;
 
 	float frame_rate;
 	bool m_shouldRefreshColors = true;

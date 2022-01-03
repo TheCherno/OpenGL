@@ -11,6 +11,7 @@
 using namespace GLCore;
 using namespace GLCore::Utils;
 
+typedef int unsigned uint;
 
 static void HelpMarker(const char* desc)
 {
@@ -34,8 +35,8 @@ glm::dvec2 FractalLayer::MapPosToCoords(const glm::dvec2& pos)
 {
 	return
 	{
-		map(pos.x, m_xRange.x, m_xRange.y, 0, m_size.x),
-		map(pos.y, m_yRange.x, m_yRange.y, m_size.y, 0)
+		map(pos.x, m_xRange.x, m_xRange.y, 0, m_screenSize.x),
+		map(pos.y, m_yRange.x, m_yRange.y, m_screenSize.y, 0)
 	};
 }
 
@@ -43,14 +44,14 @@ glm::dvec2 FractalLayer::MapCoordsToPos(const glm::dvec2& coords)
 {
 	return
 	{
-		map(coords.x, 0, m_size.x, m_xRange.x, m_xRange.y),
-		map(coords.y, m_size.y, 0, m_yRange.x, m_yRange.y)
+		map(coords.x, 0, m_screenSize.x, m_xRange.x, m_xRange.y),
+		map(coords.y, m_screenSize.y, 0, m_yRange.x, m_yRange.y)
 	};
 }
 
 void FractalLayer::UpdateRange()
 {
-	double aspect = (double)m_size.x / (double)m_size.y;
+	double aspect = (double)m_screenSize.x / (double)m_screenSize.y;
 
 	m_yRange = { m_center.y - m_radius, m_center.y + m_radius };
 	m_xRange = { m_center.x - aspect * m_radius, m_center.x + aspect * m_radius };
@@ -88,12 +89,7 @@ void FractalLayer::CreateFrameBuffer()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_FrameBuffer);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_Texture, 0);
-
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-	{
-		std::cout << "Error creating framebuffer\n";
-	}
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_Texture, 0);	
 
 	// Out Data
 	glGenTextures(1, &m_OutData);
@@ -134,7 +130,7 @@ void FractalLayer::CreateFrameBuffer()
 	
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 	{
-		std::cout << "Error creating framebuffer\n";
+		std::cout << "Error creating framebuffer (" << m_size.x << ", " << m_size.y << ")\n";
 	}
 }
 
@@ -187,13 +183,23 @@ void FractalLayer::RefreshColorFunctions()
 	SetColorFunc(m_colors[m_selectedColor]);
 }
 
+glm::uvec2 FractalLayer::GetMultipliedResolution()
+{
+	return 
+	{ 
+		(uint)(m_screenSize.x * (m_resolutionPercentage / 100.f)), 
+		(uint)(m_screenSize.y * (m_resolutionPercentage / 100.f)) 
+	};
+}
+
 FractalLayer::FractalLayer()
 	: m_radius(2)
 	, m_center(0, 0)
 	, m_itersPerFrame(100)
 {
-	m_size.x = Application::Get().GetWindow().GetWidth();
-	m_size.y = Application::Get().GetWindow().GetHeight();
+	m_screenSize.x = Application::Get().GetWindow().GetWidth();
+	m_screenSize.y = Application::Get().GetWindow().GetHeight();
+	m_size = GetMultipliedResolution();
 
 	std::ifstream file("assets/mandelbrot_fast.glsl");
 	m_coreShaderSrc = std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
@@ -231,6 +237,7 @@ void FractalLayer::OnAttach()
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 	}
 
+	Application::Get().GetWindow().SetVSync(false);
 
 	CreateFrameBuffer();
 
@@ -254,12 +261,19 @@ void FractalLayer::OnEvent(Event& event)
 	dispatcher.Dispatch<WindowResizeEvent>(
 		[&](WindowResizeEvent& e)
 		{
-			m_size.x = e.GetWidth();
-			m_size.y = e.GetHeight();
+			m_screenSize.x = e.GetWidth();
+			m_screenSize.y = e.GetHeight();
+			m_size = GetMultipliedResolution();
 
-			CreateFrameBuffer();
-			UpdateRange();
-
+			if (m_screenSize.x > 0 && m_screenSize.y > 0)
+			{
+				m_minimized = false;
+				CreateFrameBuffer();
+				UpdateRange();
+			}
+			else
+				m_minimized = true;
+			
 			return false;
 		}
 	);
@@ -272,9 +286,17 @@ void FractalLayer::OnEvent(Event& event)
 			{
 				if (e.GetMouseButton() == HZ_MOUSE_BUTTON_LEFT)
 				{
-					m_mousePressed = true;
-					m_startPos.x = Input::GetMouseX();
-					m_startPos.y = Input::GetMouseY();
+					if (Input::IsKeyPressed(HZ_KEY_LEFT_CONTROL))
+					{
+						m_center = MapCoordsToPos({ Input::GetMouseX(), Input::GetMouseY() });
+						UpdateRange();
+					}
+					else
+					{
+						m_mousePressed = true;
+						m_startPos.x = Input::GetMouseX();
+						m_startPos.y = Input::GetMouseY();
+					}
 				}
 				return false;
 			}
@@ -339,6 +361,9 @@ void FractalLayer::OnUpdate(Timestep ts)
 		}
 	}
 
+	if (m_minimized)
+		return;
+
 	// Shader uniforms
 	glUseProgram(m_Shader);
 	GLint location;
@@ -398,7 +423,7 @@ void FractalLayer::OnUpdate(Timestep ts)
 	glClearColor(0.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	glBlitFramebuffer(0, 0, m_size.x, m_size.y, 0, 0, m_size.x, m_size.y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+	glBlitFramebuffer(0, 0, m_size.x, m_size.y, 0, 0, m_screenSize.x, m_screenSize.y, GL_COLOR_BUFFER_BIT, GL_LINEAR);
 
 	m_frame++;
 }
@@ -406,6 +431,12 @@ void FractalLayer::OnUpdate(Timestep ts)
 void FractalLayer::OnImGuiRender()
 {
 	//ImGui::ShowDemoWindow();
+
+	ImGuiStyle& style = ImGui::GetStyle();
+
+	auto windowBgCol = style.Colors[ImGuiCol_WindowBg];
+	windowBgCol.w = 0.6f;
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, windowBgCol);
 
 	ImGui::Begin("Controls");
 
@@ -430,15 +461,26 @@ void FractalLayer::OnImGuiRender()
 	if (ImGui::DragScalar("Radius", ImGuiDataType_Double, &m_radius, 0.01f, &rmin, &rmax, "%e", ImGuiSliderFlags_Logarithmic))
 		UpdateRange();
 
+	ImGui::Separator();
+	if (ImGui::DragInt("Resolution percentage", &m_resolutionPercentage, 1, 30, 500, "%d%%", ImGuiSliderFlags_AlwaysClamp))
+	{
+		m_size = GetMultipliedResolution();
+		CreateFrameBuffer();
+		UpdateRange();
+	}
+
+	if (ImGui::Button("Screenshot"))
+		ExportTexture(m_Texture, "screenshot.png");
+
 	ImGui::Spacing();
+	ImGui::Separator();
 	ImGui::AlignTextToFramePadding();
 	ImGui::Text("Color function");
 	ImGui::SameLine();
 
-	ImGuiStyle& style = ImGui::GetStyle();
 	float lineHeight = ImGui::GetFontSize() + style.FramePadding.y * 2.0f;
-	if (ImGui::Button("Refresh"))
 	//if (ImGui::Button("+", ImVec2{ lineHeight, lineHeight }))
+	if (ImGui::Button("Refresh"))
 		m_shouldRefreshColors = true;
 
 	ImGui::SameLine(); HelpMarker("Edit the files (or add) in the 'assets/colors' folder and they will appear here after a refresh");
@@ -480,4 +522,6 @@ void FractalLayer::OnImGuiRender()
 	}
 
 	ImGui::End();
+
+	ImGui::PopStyleColor();
 }

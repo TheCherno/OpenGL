@@ -4,3 +4,4 @@
 
 #include "GLCore/Util/Shader.h"
 #include "GLCore/Util/OpenGLDebug.h"
+#include "GLCore/Util/TextureUtils.h"

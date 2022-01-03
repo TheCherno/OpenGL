@@ -8,6 +8,9 @@
 #include <GLFW/glfw3.h>
 #include <glad/glad.h>
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
+
 namespace GLCore {
 	
 	static bool s_GLFWInitialized = false;
@@ -160,6 +163,17 @@ namespace GLCore {
 	{
 		glfwPollEvents();
 		glfwSwapBuffers(m_Window);
+	}
+
+	void WindowsWindow::MakeScreenshot(const std::string& path) const
+	{
+		BYTE* pixels = new BYTE[m_Data.Width * m_Data.Height * 3];
+
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+		glReadPixels(0, 0, m_Data.Width, m_Data.Height, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+		stbi_write_png(path.c_str(), m_Data.Width, m_Data.Height, 3, pixels, m_Data.Width * 3);
+
+		delete[] pixels;
 	}
 
 	void WindowsWindow::SetVSync(bool enabled)
