@@ -1,11 +1,10 @@
 #uniform colorMult 250 1 NULL;
-vec3 rgb(int r, int g, int b) { return vec3(r, g, b) / 255.0; }
 vec3 colors[] = vec3[](
-	rgb(0, 0, 0),
-	rgb(154, 57, 65),
-	rgb(255, 221, 136),
-	rgb(31, 77, 130),
-	rgb(0, 0, 0)
+	vec3(0.0, 0.0, 0.0),
+	vec3(0.6, 0.22, 0.26),
+	vec3(1.0, 0.86, 0.56),
+	vec3(0.13, 0.31, 0.5),
+	vec3(0.0, 0.0, 0.0)
 );
 vec3 get_color(int iters)
 {

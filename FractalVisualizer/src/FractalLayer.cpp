@@ -8,6 +8,8 @@
 #include <iomanip>
 #include <filesystem>
 
+#include <commdlg.h>
+
 using namespace GLCore;
 using namespace GLCore::Utils;
 
@@ -237,7 +239,7 @@ void FractalLayer::OnAttach()
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 	}
 
-	Application::Get().GetWindow().SetVSync(false);
+	Application::Get().GetWindow().SetVSync(true);
 
 	CreateFrameBuffer();
 
@@ -470,7 +472,26 @@ void FractalLayer::OnImGuiRender()
 	}
 
 	if (ImGui::Button("Screenshot"))
-		ExportTexture(m_Texture, "screenshot.png");
+	{
+		const char* filter = "PNG (*.png)\0*.png\0JPEG (*jpg; *jpeg)\0*.jpg;*.jpeg\0BMP (*.bmp)\0*.bmp\0TGA (*.tga)\0*.tga\0";
+
+		OPENFILENAMEA ofn;
+		CHAR szFile[260] = "screenshot";
+		ZeroMemory(&ofn, sizeof(OPENFILENAME));
+		ofn.lStructSize = sizeof(OPENFILENAME);
+		//ofn.hwndOwner = Application::Get().GetWindow().GetNativeWindow(); TODO ;-;
+		ofn.lpstrFile = szFile;
+		ofn.nMaxFile = sizeof(szFile);
+		ofn.lpstrFilter = filter;
+		ofn.nFilterIndex = 1;
+		ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+
+		// Sets the default extension by extracting it from the filter
+		ofn.lpstrDefExt = strchr(filter, '\0') + 1;
+
+		if (GetSaveFileNameA(&ofn) == TRUE)
+			ExportTexture(m_Texture, ofn.lpstrFile);
+	}
 
 	ImGui::Spacing();
 	ImGui::Separator();

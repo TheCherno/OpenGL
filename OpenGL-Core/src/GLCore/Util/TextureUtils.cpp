@@ -6,7 +6,15 @@
 
 namespace GLCore::Utils {
 
-	void ExportTexture(GLuint textureID, const std::string& path)
+    static std::string ToLower(std::string str)
+    {
+        for (auto& c : str)
+            c = (char)std::tolower((int)c);
+
+        return str;
+    }
+
+	bool ExportTexture(GLuint textureID, const std::string& filename)
 	{
 		glBindTexture(GL_TEXTURE_2D, textureID);
 
@@ -14,13 +22,42 @@ namespace GLCore::Utils {
 		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
 		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
 
-		BYTE* pixels = new BYTE[width * height * 3];
+		if (width > 0 && height > 0)
+		{
+			BYTE* pixels = new BYTE[width * height * 4];
 
-		glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-		stbi_flip_vertically_on_write(1);
-		stbi_write_png(path.c_str(), width, height, 3, pixels, width * 3);
+			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+			stbi_flip_vertically_on_write(1);
 
-		delete[] pixels;
+            // Code from SFML
+            // Extract the extension
+            const std::size_t dot = filename.find_last_of('.');
+            const std::string extension = dot != std::string::npos ? ToLower(filename.substr(dot + 1)) : "";
+
+            if (extension == "bmp")
+            {
+                if (stbi_write_bmp(filename.c_str(), width, height, 4, pixels))
+                    return true;
+            }
+            else if (extension == "tga")
+            {
+                if (stbi_write_tga(filename.c_str(), width, height, 4, pixels))
+                    return true;
+            }
+            else if (extension == "png")
+            {
+                if (stbi_write_png(filename.c_str(), width, height, 4, pixels, 0))
+                    return true;
+            }
+            else if (extension == "jpg" || extension == "jpeg")
+            {
+                if (stbi_write_jpg(filename.c_str(), width, height, 4, &pixels[0], 90))
+                    return true;
+            }
+
+			delete[] pixels;
+		}
+        return false;
 	}
 
 }
