@@ -24,9 +24,9 @@ namespace GLCore::Utils {
 
 		if (width > 0 && height > 0)
 		{
-			BYTE* pixels = new BYTE[width * height * 3];
+			BYTE* pixels = new BYTE[width * height * 4];
 
-			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 			stbi_flip_vertically_on_write(1);
 
             // Code from SFML
@@ -36,22 +36,22 @@ namespace GLCore::Utils {
 
             if (extension == "bmp")
             {
-                if (stbi_write_bmp(filename.c_str(), width, height, 3, pixels))
+                if (stbi_write_bmp(filename.c_str(), width, height, 4, pixels))
                     return true;
             }
             else if (extension == "tga")
             {
-                if (stbi_write_tga(filename.c_str(), width, height, 3, pixels))
+                if (stbi_write_tga(filename.c_str(), width, height, 4, pixels))
                     return true;
             }
             else if (extension == "png")
             {
-                if (stbi_write_png(filename.c_str(), width, height, 3, pixels, 0))
+                if (stbi_write_png(filename.c_str(), width, height, 4, pixels, 0))
                     return true;
             }
             else if (extension == "jpg" || extension == "jpeg")
             {
-                if (stbi_write_jpg(filename.c_str(), width, height, 3, &pixels[0], 90))
+                if (stbi_write_jpg(filename.c_str(), width, height, 4, &pixels[0], 90))
                     return true;
             }
 

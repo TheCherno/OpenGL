@@ -87,44 +87,14 @@ void main()
 			glUniform1f(loc, u.default_val);
 		}
 
-		// Default quad
-		GLuint quadVA;
-		glCreateVertexArrays(1, &quadVA);
-		glBindVertexArray(quadVA);
-
-		float vertices[] = {
-			-1.0f, -1.0f,
-			 1.0f, -1.0f,
-			 1.0f,  1.0f,
-			-1.0f,  1.0f
-		};
-
-		GLuint quadVB;
-		glCreateBuffers(1, &quadVB);
-		glBindBuffer(GL_ARRAY_BUFFER, quadVB);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
-
-		uint32_t indices[] = { 0, 1, 2, 2, 3, 0 };
-		GLuint quadIB;
-		glCreateBuffers(1, &quadIB);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, quadIB);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
 		// Drawing
 		glViewport(0, 0, previewSize.x, previewSize.y);
 		glDisable(GL_BLEND);
 
-		glBindVertexArray(quadVA);
+		glBindVertexArray(Application::GetDefaultQuadVA());
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
 		// Cleaning up
-		glDeleteVertexArrays(1, &quadVA);
-		glDeleteBuffers(1, &quadVB);
-		glDeleteBuffers(1, &quadIB);
-
 		glDeleteFramebuffers(1, &fb);
 		glDeleteProgram(shader);
 

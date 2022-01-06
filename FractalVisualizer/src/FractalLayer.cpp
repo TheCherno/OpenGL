@@ -28,42 +28,74 @@ static void HelpMarker(const char* desc)
 	}
 }
 
+std::ostream& operator<<(std::ostream& os, const ImVec2& vec)
+{
+	os << '(' << vec.x << ", " << vec.y << ')';
+	return os;
+}
+
+template<typename T>
+std::ostream& operator<<(std::ostream& os, const glm::vec<2, T>& vec)
+{
+	os << '(' << vec.x << ", " << vec.y << ')';
+	return os;
+}
+
+ImVec2 operator+(const ImVec2& l, const ImVec2& r)
+{
+	return { l.x + r.x, l.y + r.y };
+}
+
+ImVec2 operator-(const ImVec2& l, const ImVec2& r)
+{
+	return { l.x - r.x, l.y - r.y };
+}
+
 static double map(const double& value, const double& inputMin, const double& inputMax, const double& outputMin, const double& outputMax)
 {
 	return outputMin + ((outputMax - outputMin) / (inputMax - inputMin)) * (value - inputMin);
 }
 
-glm::dvec2 FractalLayer::MapPosToCoords(const glm::dvec2& pos)
+ImVec2 FractalLayer::MapPosToCoords(const glm::dvec2& pos)
 {
 	return
 	{
-		map(pos.x, m_xRange.x, m_xRange.y, 0, m_screenSize.x),
-		map(pos.y, m_yRange.x, m_yRange.y, m_screenSize.y, 0)
+		(float)map(pos.x, m_xRange.x, m_xRange.y, 0, m_viewportSize.x),
+		(float)map(pos.y, m_yRange.x, m_yRange.y, m_viewportSize.y, 0)
 	};
 }
 
-glm::dvec2 FractalLayer::MapCoordsToPos(const glm::dvec2& coords)
+glm::dvec2 FractalLayer::MapCoordsToPos(const ImVec2& coords)
 {
 	return
 	{
-		map(coords.x, 0, m_screenSize.x, m_xRange.x, m_xRange.y),
-		map(coords.y, m_screenSize.y, 0, m_yRange.x, m_yRange.y)
+		map(coords.x, 0, m_viewportSize.x, m_xRange.x, m_xRange.y),
+		map(coords.y, m_viewportSize.y, 0, m_yRange.x, m_yRange.y)
+	};
+}
+
+glm::dvec2 FractalLayer::DeltaPixelsToPos(const ImVec2& delta)
+{
+	return
+	{
+		map(-delta.x, 0, m_viewportSize.x, 0, abs(m_xRange.y - m_xRange.x)),
+		map(delta.y, 0, m_viewportSize.y, 0, abs(m_yRange.y - m_yRange.x))
 	};
 }
 
 void FractalLayer::UpdateRange()
 {
-	double aspect = (double)m_screenSize.x / (double)m_screenSize.y;
+	double aspect = (double)m_viewportSize.x / (double)m_viewportSize.y;
 
 	m_yRange = { m_center.y - m_radius, m_center.y + m_radius };
 	m_xRange = { m_center.x - aspect * m_radius, m_center.x + aspect * m_radius };
 
 	glUseProgram(m_Shader);
 
-	int location = glGetUniformLocation(m_Shader, "xRange");
+	int location = glGetUniformLocation(m_Shader, "i_xRange");
 	glUniform2d(location, m_xRange.x, m_xRange.y);
 
-	location = glGetUniformLocation(m_Shader, "yRange");
+	location = glGetUniformLocation(m_Shader, "i_yRange");
 	glUniform2d(location, m_yRange.x, m_yRange.y);
 
 	m_frame = 0;
@@ -86,7 +118,7 @@ void FractalLayer::CreateFrameBuffer()
 
 	glGenTextures(1, &m_Texture);
 	glBindTexture(GL_TEXTURE_2D, m_Texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_size.x, m_size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_size.x, m_size.y, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -189,8 +221,8 @@ glm::uvec2 FractalLayer::GetMultipliedResolution()
 {
 	return 
 	{ 
-		(uint)(m_screenSize.x * (m_resolutionPercentage / 100.f)), 
-		(uint)(m_screenSize.y * (m_resolutionPercentage / 100.f)) 
+		(uint)(m_viewportSize.x * (m_resolutionPercentage / 100.f)), 
+		(uint)(m_viewportSize.y * (m_resolutionPercentage / 100.f)) 
 	};
 }
 
@@ -199,11 +231,11 @@ FractalLayer::FractalLayer()
 	, m_center(0, 0)
 	, m_itersPerFrame(100)
 {
-	m_screenSize.x = Application::Get().GetWindow().GetWidth();
-	m_screenSize.y = Application::Get().GetWindow().GetHeight();
+	m_viewportSize.x = Application::Get().GetWindow().GetWidth();
+	m_viewportSize.y = Application::Get().GetWindow().GetHeight();
 	m_size = GetMultipliedResolution();
 
-	std::ifstream file("assets/mandelbrot_fast.glsl");
+	std::ifstream file("assets/mandelbrot.glsl");
 	m_coreShaderSrc = std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
 	//m_center = { -0.74656412896773705068, 0.09886581010775417899 };
@@ -213,31 +245,6 @@ FractalLayer::FractalLayer()
 void FractalLayer::OnAttach()
 {
 	EnableGLDebugging();
-
-	// Create default quad
-	{
-		glCreateVertexArrays(1, &m_QuadVA);
-		glBindVertexArray(m_QuadVA);
-
-		float vertices[] = {
-			-1.0f, -1.0f,
-			 1.0f, -1.0f,
-			 1.0f,  1.0f,
-			-1.0f,  1.0f
-		};
-
-		glCreateBuffers(1, &m_QuadVB);
-		glBindBuffer(GL_ARRAY_BUFFER, m_QuadVB);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
-
-		uint32_t indices[] = { 0, 1, 2, 2, 3, 0 };
-		glCreateBuffers(1, &m_QuadIB);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_QuadIB);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-	}
 
 	Application::Get().GetWindow().SetVSync(true);
 
@@ -251,90 +258,11 @@ void FractalLayer::OnAttach()
 void FractalLayer::OnDetach()
 {
 	CleanOpenGL();
-
-	glDeleteVertexArrays(1, &m_QuadVA);
-	glDeleteBuffers(1, &m_QuadVB);
-	glDeleteBuffers(1, &m_QuadIB);
 }
 
 void FractalLayer::OnEvent(Event& event)
 {
-	EventDispatcher dispatcher(event);
-	dispatcher.Dispatch<WindowResizeEvent>(
-		[&](WindowResizeEvent& e)
-		{
-			m_screenSize.x = e.GetWidth();
-			m_screenSize.y = e.GetHeight();
-			m_size = GetMultipliedResolution();
-
-			if (m_screenSize.x > 0 && m_screenSize.y > 0)
-			{
-				m_minimized = false;
-				CreateFrameBuffer();
-				UpdateRange();
-			}
-			else
-				m_minimized = true;
-			
-			return false;
-		}
-	);
-
-	ImGuiIO& io = ImGui::GetIO();
-	if (!io.WantCaptureMouse)
-	{
-		dispatcher.Dispatch<MouseButtonPressedEvent>(
-			[&](MouseButtonPressedEvent& e)
-			{
-				if (e.GetMouseButton() == HZ_MOUSE_BUTTON_LEFT)
-				{
-					if (Input::IsKeyPressed(HZ_KEY_LEFT_CONTROL))
-					{
-						m_center = MapCoordsToPos({ Input::GetMouseX(), Input::GetMouseY() });
-						UpdateRange();
-					}
-					else
-					{
-						m_mousePressed = true;
-						m_startPos.x = Input::GetMouseX();
-						m_startPos.y = Input::GetMouseY();
-					}
-				}
-				return false;
-			}
-		);
-		dispatcher.Dispatch<MouseButtonReleasedEvent>(
-			[&](MouseButtonReleasedEvent& e)
-			{
-				if (e.GetMouseButton() == HZ_MOUSE_BUTTON_LEFT)
-				{
-					m_mousePressed = false;
-				}
-				return false;
-			}
-		);
-		dispatcher.Dispatch<MouseScrolledEvent>(
-			[&](MouseScrolledEvent& e)
-			{
-				m_radius /= std::pow(1.1f, e.GetYOffset());
-
-				// Zoom where the mouse is
-				glm::dvec2 iMousePos = MapCoordsToPos({ Input::GetMouseX(), Input::GetMouseY() });
-
-				UpdateRange();
-
-				glm::dvec2 fMousePos = MapCoordsToPos({ Input::GetMouseX(), Input::GetMouseY() });
-
-				glm::dvec2 delta = fMousePos - iMousePos;
-
-				m_center -= delta;
-
-				UpdateRange();
-
-				return false;
-			}
-		);
-	}
+	
 }
 
 void FractalLayer::OnUpdate(Timestep ts)
@@ -347,25 +275,6 @@ void FractalLayer::OnUpdate(Timestep ts)
 		m_shouldRefreshColors = false;
 	}
 
-	if (m_mousePressed)
-	{
-		glm::dvec2 mousePos = MapCoordsToPos({ Input::GetMouseX(), Input::GetMouseY() });
-		glm::dvec2 delta = MapCoordsToPos(m_startPos) - mousePos;
-
-		if (glm::length(delta) > 0)
-		{
-			m_center += delta;
-
-			m_startPos.x = Input::GetMouseX();
-			m_startPos.y = Input::GetMouseY();
-
-			UpdateRange();
-		}
-	}
-
-	if (m_minimized)
-		return;
-
 	// Shader uniforms
 	glUseProgram(m_Shader);
 	GLint location;
@@ -376,13 +285,13 @@ void FractalLayer::OnUpdate(Timestep ts)
 		glUniform1f(location, u.val);
 	}
 
-	location = glGetUniformLocation(m_Shader, "size");
+	location = glGetUniformLocation(m_Shader, "i_Size");
 	glUniform2ui(location, m_size.x, m_size.y);
 
-	location = glGetUniformLocation(m_Shader, "itersPerFrame");
+	location = glGetUniformLocation(m_Shader, "i_ItersPerFrame");
 	glUniform1ui(location, m_itersPerFrame);
 
-	location = glGetUniformLocation(m_Shader, "frame");
+	location = glGetUniformLocation(m_Shader, "i_Frame");
 	glUniform1ui(location, m_frame);
 
 	glActiveTexture(GL_TEXTURE0);
@@ -404,7 +313,7 @@ void FractalLayer::OnUpdate(Timestep ts)
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	}
 
-	glBindVertexArray(m_QuadVA);
+	glBindVertexArray(Application::GetDefaultQuadVA());
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
 
@@ -425,131 +334,228 @@ void FractalLayer::OnUpdate(Timestep ts)
 	glClearColor(0.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	glBlitFramebuffer(0, 0, m_size.x, m_size.y, 0, 0, m_screenSize.x, m_screenSize.y, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+	//glBlitFramebuffer(0, 0, m_size.x, m_size.y, 0, 0, m_viewportSize.x, m_viewportSize.y, GL_COLOR_BUFFER_BIT, GL_LINEAR);
 
 	m_frame++;
 }
 
 void FractalLayer::OnImGuiRender()
 {
-	//ImGui::ShowDemoWindow();
+	static bool dockspaceOpen = true;
+	static bool opt_fullscreen_persistant = true;
+	bool opt_fullscreen = opt_fullscreen_persistant;
+
+	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking; //| ImGuiWindowFlags_MenuBar;
+	if (opt_fullscreen)
+	{
+		ImGuiViewport* viewport = ImGui::GetMainViewport();
+		ImGui::SetNextWindowPos(viewport->Pos);
+		ImGui::SetNextWindowSize(viewport->Size);
+		ImGui::SetNextWindowViewport(viewport->ID);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+		window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+		window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+	}
+
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+	ImGui::Begin("DockSpace Demo", &dockspaceOpen, window_flags);
+	ImGui::PopStyleVar();
+
+	if (opt_fullscreen)
+		ImGui::PopStyleVar(2);
+
+	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigWindowsMoveFromTitleBarOnly = true;
 
 	ImGuiStyle& style = ImGui::GetStyle();
-
-	auto windowBgCol = style.Colors[ImGuiCol_WindowBg];
-	windowBgCol.w = 0.6f;
-	ImGui::PushStyleColor(ImGuiCol_WindowBg, windowBgCol);
-
-	ImGui::Begin("Controls");
-
-	std::stringstream ss;
-	ss << std::fixed << std::setprecision(1) << "General (" << frame_rate << "fps)";
-
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text(ss.str().c_str()); 
-	ImGui::SameLine();
-	if (ImGui::Button("Reload Core Shader"))
+	if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
 	{
-		std::ifstream file("assets/mandelbrot_fast.glsl");
-		m_coreShaderSrc = std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-
-		SetColorFunc(m_colors[m_selectedColor]);
+		ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+		ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f));
 	}
 
-	if (ImGui::DragInt("Iterations per frame", (int*)&m_itersPerFrame, 10, 1, 10000, "%d", ImGuiSliderFlags_AlwaysClamp))
-		m_frame = 0;
+	ImGui::ShowDemoWindow();
 
-	double cmin = -2, cmax = 2;
-	if (ImGui::DragScalarN("Center", ImGuiDataType_Double, glm::value_ptr(m_center), 2, (float)m_radius / 70.f, &cmin, &cmax, "%.15f"))
-		UpdateRange();
-
-	double rmin = 1e-15, rmax = 50;
-	static float v = 0;
-	if (ImGui::DragScalar("Radius", ImGuiDataType_Double, &m_radius, 0.01f, &rmin, &rmax, "%e", ImGuiSliderFlags_Logarithmic))
-		UpdateRange();
-
-	ImGui::Separator();
-	if (ImGui::DragInt("Resolution percentage", &m_resolutionPercentage, 1, 30, 500, "%d%%", ImGuiSliderFlags_AlwaysClamp))
+	// Viewport
 	{
-		m_size = GetMultipliedResolution();
-		CreateFrameBuffer();
-		UpdateRange();
-	}
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
+		ImGui::Begin("Viewport", nullptr);
 
-	if (ImGui::Button("Screenshot"))
-	{
-		const char* filter = "PNG (*.png)\0*.png\0JPEG (*jpg; *jpeg)\0*.jpg;*.jpeg\0BMP (*.bmp)\0*.bmp\0TGA (*.tga)\0*.tga\0";
-
-		OPENFILENAMEA ofn;
-		CHAR szFile[260];
-		sprintf_s(szFile, "%.15f,%.15f", m_center.x, m_center.y);
-
-		ZeroMemory(&ofn, sizeof(OPENFILENAME));
-		ofn.lStructSize = sizeof(OPENFILENAME);
-		//ofn.hwndOwner = Application::Get().GetWindow().GetNativeWindow(); TODO ;-;
-		ofn.lpstrFile = szFile;
-		ofn.nMaxFile = sizeof(szFile);
-		ofn.lpstrFilter = filter;
-		ofn.nFilterIndex = 1;
-		ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
-
-		// Sets the default extension by extracting it from the filter
-		ofn.lpstrDefExt = strchr(filter, '\0') + 1;
-
-		if (GetSaveFileNameA(&ofn) == TRUE)
-			ExportTexture(m_Texture, ofn.lpstrFile);
-	}
-
-	ImGui::Spacing();
-	ImGui::Separator();
-	ImGui::AlignTextToFramePadding();
-	ImGui::Text("Color function");
-	ImGui::SameLine();
-
-	float lineHeight = ImGui::GetFontSize() + style.FramePadding.y * 2.0f;
-	//if (ImGui::Button("+", ImVec2{ lineHeight, lineHeight }))
-	if (ImGui::Button("Refresh"))
-		m_shouldRefreshColors = true;
-
-	ImGui::SameLine(); HelpMarker("Edit the files (or add) in the 'assets/colors' folder and they will appear here after a refresh");
-
-	ImVec2 button_size = { 100, 50 };
-	float window_visible_x2 = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
-	for (size_t i = 0; i < m_colors.size(); i++)
-	{
-		ImGui::PushID((int)i);
-
-		if (m_selectedColor == i)
-			ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_ButtonActive]);
-		else
-			ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_Button]);
-
-		if (ImGui::ImageButton(m_colors[i].GetPreview(), button_size))
+		// Resize
 		{
-			m_selectedColor = i;
+			ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
+			if (viewportPanelSize.x != m_viewportSize.x || viewportPanelSize.y != m_viewportSize.y)
+			{
+				m_viewportSize = { viewportPanelSize.x, viewportPanelSize.y };
+				m_size = GetMultipliedResolution();
+				CreateFrameBuffer();
+				UpdateRange();
+			}
+		}
+
+		// Events
+		if (ImGui::IsWindowHovered())
+		{
+			auto mousePos = ImGui::GetMousePos() - ImGui::GetWindowPos() - ImGui::GetWindowContentRegionMin();
+
+			if (ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0))
+			{
+				if (io.MouseDelta.x != 0 || io.MouseDelta.y != 0)
+				{
+					m_center += DeltaPixelsToPos(io.MouseDelta);
+					UpdateRange();
+				}
+			}
+
+			if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && io.KeyCtrl)
+			{
+				m_center = MapCoordsToPos(mousePos);
+				UpdateRange();
+			}
+
+			if (io.MouseWheel != 0)
+			{
+				m_radius /= std::pow(1.1f, io.MouseWheel);
+
+				// Zoom where the mouse is
+				glm::dvec2 iMousePos = MapCoordsToPos(mousePos);
+
+				UpdateRange();
+
+				glm::dvec2 fMousePos = MapCoordsToPos(mousePos);
+
+				glm::dvec2 delta = fMousePos - iMousePos;
+
+				m_center -= delta;
+
+				UpdateRange();
+			}
+		}
+
+		ImGui::Image((ImTextureID)(intptr_t)m_Texture, ImVec2{ (float)m_viewportSize.x, (float)m_viewportSize.y }, ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
+
+		ImGui::End();
+		ImGui::PopStyleVar();
+	}
+	
+	// Controls
+	{
+		auto windowBgCol = style.Colors[ImGuiCol_WindowBg];
+		windowBgCol.w = 0.5f;
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, windowBgCol);
+		ImGui::Begin("Controls");
+
+		std::stringstream ss;
+		ss << std::fixed << std::setprecision(1) << "General (" << frame_rate << "fps)";
+
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text(ss.str().c_str());
+		ImGui::SameLine();
+		if (ImGui::Button("Reload Core Shader"))
+		{
+			std::ifstream file("assets/julia.glsl");
+			m_coreShaderSrc = std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
 			SetColorFunc(m_colors[m_selectedColor]);
 		}
 
-		ImGui::PopStyleColor();
-
-		float last_button_x2 = ImGui::GetItemRectMax().x;
-		float next_button_x2 = last_button_x2 + style.ItemSpacing.x + button_size.x; // Expected position if next button was on same line
-
-		if (i + 1 < m_colors.size() && next_button_x2 < window_visible_x2)
-			ImGui::SameLine();
-
-		ImGui::PopID();
-	}
-
-	ImGui::Spacing();
-	ImGui::Text("Color function parameters");
-	for (auto& u : m_colors[m_selectedColor].GetUniforms())
-	{
-		if (ImGui::DragFloat(u.name.c_str(), &u.val, 1, u.range.x, u.range.y))
+		if (ImGui::DragInt("Iterations per frame", (int*)&m_itersPerFrame, 10, 1, 10000, "%d", ImGuiSliderFlags_AlwaysClamp))
 			m_frame = 0;
+
+		double cmin = -2, cmax = 2;
+		if (ImGui::DragScalarN("Center", ImGuiDataType_Double, glm::value_ptr(m_center), 2, (float)m_radius / 70.f, &cmin, &cmax, "%.15f"))
+			UpdateRange();
+
+		double rmin = 1e-15, rmax = 50;
+		static float v = 0;
+		if (ImGui::DragScalar("Radius", ImGuiDataType_Double, &m_radius, 0.01f, &rmin, &rmax, "%e", ImGuiSliderFlags_Logarithmic))
+			UpdateRange();
+
+		ImGui::Separator();
+		if (ImGui::DragInt("Resolution percentage", &m_resolutionPercentage, 1, 30, 500, "%d%%", ImGuiSliderFlags_AlwaysClamp))
+		{
+			m_size = GetMultipliedResolution();
+			CreateFrameBuffer();
+			UpdateRange();
+		}
+
+		if (ImGui::Button("Screenshot"))
+		{
+			const char* filter = "PNG (*.png)\0*.png\0JPEG (*jpg; *jpeg)\0*.jpg;*.jpeg\0BMP (*.bmp)\0*.bmp\0TGA (*.tga)\0*.tga\0";
+
+			OPENFILENAMEA ofn;
+			CHAR szFile[260];
+			sprintf_s(szFile, "%.15f,%.15f", m_center.x, m_center.y);
+
+			ZeroMemory(&ofn, sizeof(OPENFILENAME));
+			ofn.lStructSize = sizeof(OPENFILENAME);
+			//ofn.hwndOwner = Application::Get().GetWindow().GetNativeWindow(); TODO ;-;
+			ofn.lpstrFile = szFile;
+			ofn.nMaxFile = sizeof(szFile);
+			ofn.lpstrFilter = filter;
+			ofn.nFilterIndex = 1;
+			ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
+
+			// Sets the default extension by extracting it from the filter
+			ofn.lpstrDefExt = strchr(filter, '\0') + 1;
+
+			if (GetSaveFileNameA(&ofn) == TRUE)
+				ExportTexture(m_Texture, ofn.lpstrFile);
+		}
+
+		ImGui::Spacing();
+		ImGui::Separator();
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Color function");
+		ImGui::SameLine();
+
+		float lineHeight = ImGui::GetFontSize() + style.FramePadding.y * 2.0f;
+		//if (ImGui::Button("+", ImVec2{ lineHeight, lineHeight }))
+		if (ImGui::Button("Refresh"))
+			m_shouldRefreshColors = true;
+
+		ImGui::SameLine(); HelpMarker("Edit the files (or add) in the 'assets/colors' folder and they will appear here after a refresh");
+
+		ImVec2 button_size = { 100, 50 };
+		float window_visible_x2 = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
+		for (size_t i = 0; i < m_colors.size(); i++)
+		{
+			ImGui::PushID((int)i);
+
+			if (m_selectedColor == i)
+				ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_ButtonActive]);
+			else
+				ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_Button]);
+
+			if (ImGui::ImageButton(m_colors[i].GetPreview(), button_size))
+			{
+				m_selectedColor = i;
+				SetColorFunc(m_colors[m_selectedColor]);
+			}
+
+			ImGui::PopStyleColor();
+
+			float last_button_x2 = ImGui::GetItemRectMax().x;
+			float next_button_x2 = last_button_x2 + style.ItemSpacing.x + button_size.x; // Expected position if next button was on same line
+
+			if (i + 1 < m_colors.size() && next_button_x2 < window_visible_x2)
+				ImGui::SameLine();
+
+			ImGui::PopID();
+		}
+
+		ImGui::Spacing();
+		ImGui::Text("Color function parameters");
+		for (auto& u : m_colors[m_selectedColor].GetUniforms())
+		{
+			if (ImGui::DragFloat(u.name.c_str(), &u.val, 1, u.range.x, u.range.y))
+				m_frame = 0;
+		}
+
+		ImGui::End(); // Controls
+		ImGui::PopStyleColor();
 	}
 
-	ImGui::End();
-
-	ImGui::PopStyleColor();
+	ImGui::End(); // Dockspace
 }

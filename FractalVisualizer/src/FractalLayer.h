@@ -18,8 +18,10 @@ public:
 	virtual void OnImGuiRender() override;
 private:
 
-	glm::dvec2 MapPosToCoords(const glm::dvec2& pos);
-	glm::dvec2 MapCoordsToPos(const glm::dvec2& coords);
+	ImVec2 MapPosToCoords(const glm::dvec2& pos);
+	glm::dvec2 MapCoordsToPos(const ImVec2& coords);
+
+	glm::dvec2 DeltaPixelsToPos(const ImVec2& delta);
 
 	void UpdateRange();
 
@@ -39,9 +41,6 @@ private:
 	std::string m_coreShaderSrc;
 	GLuint m_Shader = 0;
 
-	// Default quad
-	GLuint m_QuadVA, m_QuadVB, m_QuadIB;
-
 	// Textures
 	GLuint m_FrameBuffer, m_Texture;
 	GLuint m_InData, m_OutData, m_InIter, m_OutIter;
@@ -59,7 +58,7 @@ private:
 	glm::dvec2 m_yRange;
 
 	// Window and iteraction
-	glm::uvec2 m_screenSize;
+	glm::uvec2 m_viewportSize;
 	bool m_mousePressed = false;
 	glm::dvec2 m_startPos;
 	bool m_minimized = false;

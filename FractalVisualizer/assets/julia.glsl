@@ -14,6 +14,8 @@ uniform dvec2 i_yRange;
 uniform uint i_ItersPerFrame;
 uniform uint i_Frame;
 
+uniform dvec2 i_JuliaC;
+
 #color
 
 double map(double value, double inputMin, double inputMax, double outputMin, double outputMax)
@@ -26,7 +28,7 @@ double rand(float s)
     return fract(sin(s * 12.9898) * 43758.5453);
 }
 
-void mandelbrot(dvec2 z0, uvec2 size, dvec2 xRange, dvec2 yRange)
+void julia(dvec2 c, uvec2 size, dvec2 xRange, dvec2 yRange)
 {
     uvec2 iter_data = texture(i_Iter, gl_FragCoord.xy / size).xy;
     uint iter = iter_data.x;
@@ -35,14 +37,11 @@ void mandelbrot(dvec2 z0, uvec2 size, dvec2 xRange, dvec2 yRange)
     dvec2 screen_pos = gl_FragCoord.xy;
     dvec2 pos = screen_pos + dvec2(rand(iter), rand(iter + 1));
 
-    dvec2 c;
-    c.x = map(pos.x, 0, size.x, xRange.x, xRange.y);
-    c.y = map(pos.y, 0, size.y, yRange.x, yRange.y);
-
     dvec2 z;
     if (i_Frame == 0)
     {
-        z = z0;
+        z.x = map(pos.x, 0, size.x, xRange.x, xRange.y);
+        z.y = map(pos.y, 0, size.y, yRange.x, yRange.y);
         iter = 0;
         total_iters = 0;
     }
@@ -67,7 +66,11 @@ void mandelbrot(dvec2 z0, uvec2 size, dvec2 xRange, dvec2 yRange)
     }
     else
     {
-        o_Data = uvec4(unpackDouble2x32(z0.x), unpackDouble2x32(z0.y));
+        o_Data = uvec4(
+            unpackDouble2x32(map(pos.x, 0, size.x, xRange.x, xRange.y)), 
+            unpackDouble2x32(map(pos.y, 0, size.y, yRange.x, yRange.y))
+        );
+        
         o_Iter = uvec2(iter + 1, 0);
         o_Color = vec4(get_color(int(total_iters) + i).xyz, 1.0 / float(iter + 1));
     }
@@ -75,5 +78,5 @@ void mandelbrot(dvec2 z0, uvec2 size, dvec2 xRange, dvec2 yRange)
 
 void main()
 {
-    mandelbrot(dvec2(0, 0), i_Size, i_xRange, i_yRange);
+    julia(dvec2(0.28, 0.008), i_Size, i_xRange, i_yRange);
 }
