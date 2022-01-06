@@ -11,6 +11,8 @@
 
 #include "../ImGui/ImGuiLayer.h"
 
+#include <glad/glad.h>
+
 namespace GLCore {
 
 	class Application
@@ -29,16 +31,21 @@ namespace GLCore {
 		inline Window& GetWindow() { return *m_Window; }
 
 		inline static Application& Get() { return *s_Instance; }
+		inline static GLuint GetDefaultQuadVA() { return s_QuadVA; }
 	private:
 		bool OnWindowClose(WindowCloseEvent& e);
+		bool OnWindowResize(WindowResizeEvent& e);
 	private:
 		std::unique_ptr<Window> m_Window;
 		ImGuiLayer* m_ImGuiLayer;
 		bool m_Running = true;
+		bool m_Minimized = false;
 		LayerStack m_LayerStack;
 		float m_LastFrameTime = 0.0f;
 	private:
 		static Application* s_Instance;
+
+		static GLuint s_QuadVA, s_QuadVB, s_QuadIB;
 	};
 
 }
