@@ -3,6 +3,7 @@
 #include <GLCore.h>
 #include <GLCoreUtils.h>
 
+#include "FractalVisualizer.h"
 #include "ColorFunction.h"
 
 
@@ -33,7 +34,10 @@ private:
 
 	glm::uvec2 GetMultipliedResolution();
 
+	//FractalVisualizer m_Mandelbrot;
+
 	// Color function
+	std::vector<GLuint> m_colorsPreview;
 	std::vector<ColorFunction> m_colors;
 	size_t m_selectedColor = 0;
 
@@ -44,7 +48,6 @@ private:
 	// Textures
 	GLuint m_FrameBuffer, m_Texture;
 	GLuint m_InData, m_OutData, m_InIter, m_OutIter;
-
 
 	// Fractal parameters
 	glm::dvec2 m_center;

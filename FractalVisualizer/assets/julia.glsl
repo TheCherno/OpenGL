@@ -78,5 +78,6 @@ void julia(dvec2 c, uvec2 size, dvec2 xRange, dvec2 yRange)
 
 void main()
 {
-    julia(dvec2(0.28, 0.008), i_Size, i_xRange, i_yRange);
+    // julia(dvec2(0.28, 0.008), i_Size, i_xRange, i_yRange);
+    julia(i_JuliaC, i_Size, i_xRange, i_yRange);
 }

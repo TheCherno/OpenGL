@@ -1,5 +1,5 @@
 #include "GLCore.h"
-#include "FractalLayer.h"
+#include "MainLayer.h"
 
 using namespace GLCore;
 
@@ -9,7 +9,7 @@ public:
 	FractalApp()
 		: Application("Fractal Visualization")
 	{
-		PushLayer(new FractalLayer());
+		PushLayer(new MainLayer());
 	}
 };
 

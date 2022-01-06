@@ -4,7 +4,6 @@
 
 # Files
 *.user
-*imgui.ini
 
 # Visual Studio
 .vs/

@@ -1,4 +1,6 @@
-﻿#include "FractalLayer.h"
+﻿#if 0
+
+#include "FractalLayer.h"
 
 #include <GLCore/Core/Input.h>
 #include <GLCore/Core/KeyCodes.h>
@@ -203,12 +205,98 @@ void FractalLayer::SetColorFunc(const ColorFunction& colorFunc)
 
 void FractalLayer::RefreshColorFunctions()
 {
+	// Crear previews colors
 	m_colors.clear();
+
+	for (auto prev : m_colorsPreview)
+		glDeleteTextures(1, &prev);
+	m_colorsPreview.clear();
+
+	// Allocate new colors
 	m_colors.reserve(10);
 	for (const auto& path : std::filesystem::directory_iterator("assets/colors"))
 	{
 		std::ifstream colorSrc(path.path());
 		m_colors.emplace_back(std::string((std::istreambuf_iterator<char>(colorSrc)), std::istreambuf_iterator<char>()));
+	}
+
+	// Allocate the prevews
+	m_colorsPreview.reserve(m_colors.size());
+	for (const auto& c : m_colors)
+	{
+		// Make the preview
+		glm::uvec2 previewSize = { 100, 1 };
+		{
+			// Framebuffer
+			GLuint fb;
+			glGenFramebuffers(1, &fb);
+			glBindFramebuffer(GL_FRAMEBUFFER, fb);
+
+			GLuint tex;
+			glGenTextures(1, &tex);
+			glBindTexture(GL_TEXTURE_2D, tex);
+
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, previewSize.x, previewSize.y, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+			GLenum buffers[] = { GL_COLOR_ATTACHMENT0 };
+			glDrawBuffers(1, buffers);
+
+			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+			{
+				std::cout << "NOT TOTOTOTOTOT\n";
+				exit(EXIT_FAILURE);
+			}
+
+			// Shader
+			std::stringstream ss;
+			ss << "#version 400\n\n";
+			ss << c.GetSource() << '\n';
+			ss << R"(
+layout (location = 0) out vec3 outColor;
+
+uniform uint range;
+uniform uvec2 size;
+
+void main()
+{
+    int i = int((gl_FragCoord.x / size.x) * range);
+    outColor = get_color(i);
+}
+		)";
+
+			GLuint shader = GLCore::Utils::CreateShader(ss.str());
+			glUseProgram(shader);
+			GLint loc;
+
+			loc = glGetUniformLocation(shader, "range");
+			glUniform1ui(loc, 1000);
+
+			loc = glGetUniformLocation(shader, "size");
+			glUniform2ui(loc, previewSize.x, previewSize.y);
+
+			for (const auto& u : c.GetUniforms())
+			{
+				loc = glGetUniformLocation(shader, u.name.c_str());
+				glUniform1f(loc, u.default_val);
+			}
+
+			// Drawing
+			glViewport(0, 0, previewSize.x, previewSize.y);
+			glDisable(GL_BLEND);
+
+			glBindVertexArray(GLCore::Application::GetDefaultQuadVA());
+			glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+
+			// Cleaning up
+			glDeleteFramebuffers(1, &fb);
+			glDeleteProgram(shader);
+
+			m_colorsPreview.push_back(tex);
+		}
 	}
 
 	if (m_selectedColor >= m_colors.size())
@@ -240,6 +328,10 @@ FractalLayer::FractalLayer()
 
 	//m_center = { -0.74656412896773705068, 0.09886581010775417899 };
 	//m_radius = 8.2212188006580699331e-12;
+
+	//m_Mandelbrot.SetShader("assets/mandelbrot.glsl");
+	//m_Mandelbrot.SetSize(m_size);
+
 }
 
 void FractalLayer::OnAttach()
@@ -528,7 +620,7 @@ void FractalLayer::OnImGuiRender()
 			else
 				ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_Button]);
 
-			if (ImGui::ImageButton(m_colors[i].GetPreview(), button_size))
+			if (ImGui::ImageButton((ImTextureID)(intptr_t)m_colorsPreview[i], button_size))
 			{
 				m_selectedColor = i;
 				SetColorFunc(m_colors[m_selectedColor]);
@@ -559,3 +651,5 @@ void FractalLayer::OnImGuiRender()
 
 	ImGui::End(); // Dockspace
 }
+
+#endif
