@@ -32,9 +32,6 @@ void mandelbrot()
     uint iter = iter_data.x;
     uint total_iters = iter_data.y;
 
-//    if (iter > 300)
-//        return;
-
     dvec2 screen_pos = gl_FragCoord.xy;
     dvec2 pos = screen_pos + dvec2(rand(iter), rand(iter + 1));
 

@@ -445,17 +445,22 @@ void FractalLayer::OnImGuiRender()
 	std::stringstream ss;
 	ss << std::fixed << std::setprecision(1) << "General (" << frame_rate << "fps)";
 
-	ImGui::Text(ss.str().c_str());
-
-	if (ImGui::DragInt("Iterations per frame", (int*)&m_itersPerFrame, 10, 1, 2000))
+	ImGui::AlignTextToFramePadding();
+	ImGui::Text(ss.str().c_str()); 
+	ImGui::SameLine();
+	if (ImGui::Button("Reload Core Shader"))
 	{
-		if (m_itersPerFrame < 0) 
-			m_itersPerFrame = 1;
-		m_frame = 0;
+		std::ifstream file("assets/mandelbrot_fast.glsl");
+		m_coreShaderSrc = std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+
+		SetColorFunc(m_colors[m_selectedColor]);
 	}
 
+	if (ImGui::DragInt("Iterations per frame", (int*)&m_itersPerFrame, 10, 1, 10000, "%d", ImGuiSliderFlags_AlwaysClamp))
+		m_frame = 0;
+
 	double cmin = -2, cmax = 2;
-	if (ImGui::DragScalarN("Center", ImGuiDataType_Double, glm::value_ptr(m_center), 2, (float)m_radius / 20.f, &cmin, &cmax, "%.20f"))
+	if (ImGui::DragScalarN("Center", ImGuiDataType_Double, glm::value_ptr(m_center), 2, (float)m_radius / 70.f, &cmin, &cmax, "%.15f"))
 		UpdateRange();
 
 	double rmin = 1e-15, rmax = 50;
@@ -476,7 +481,9 @@ void FractalLayer::OnImGuiRender()
 		const char* filter = "PNG (*.png)\0*.png\0JPEG (*jpg; *jpeg)\0*.jpg;*.jpeg\0BMP (*.bmp)\0*.bmp\0TGA (*.tga)\0*.tga\0";
 
 		OPENFILENAMEA ofn;
-		CHAR szFile[260] = "screenshot";
+		CHAR szFile[260];
+		sprintf_s(szFile, "%.15f,%.15f", m_center.x, m_center.y);
+
 		ZeroMemory(&ofn, sizeof(OPENFILENAME));
 		ofn.lStructSize = sizeof(OPENFILENAME);
 		//ofn.hwndOwner = Application::Get().GetWindow().GetNativeWindow(); TODO ;-;
@@ -484,7 +491,7 @@ void FractalLayer::OnImGuiRender()
 		ofn.nMaxFile = sizeof(szFile);
 		ofn.lpstrFilter = filter;
 		ofn.nFilterIndex = 1;
-		ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+		ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
 
 		// Sets the default extension by extracting it from the filter
 		ofn.lpstrDefExt = strchr(filter, '\0') + 1;
