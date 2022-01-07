@@ -20,13 +20,13 @@ public:
 private:
 	std::vector<Uniform> m_uniforms;
 	std::string m_src;
-	GLuint preview;
+	//GLuint preview;
 
 public:
 
 	ColorFunction(const std::string& src);
 
-	~ColorFunction();
+	//~ColorFunction();
 
 	std::vector<Uniform>& GetUniforms();
 
@@ -34,5 +34,5 @@ public:
 
 	const std::string& GetSource() const;
 
-	ImTextureID GetPreview() const;
+	//ImTextureID GetPreview() const;
 };

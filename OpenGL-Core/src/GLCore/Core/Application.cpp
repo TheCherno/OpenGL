@@ -13,6 +13,10 @@ namespace GLCore {
 
 	Application* Application::s_Instance = nullptr;
 
+	GLuint Application::s_QuadVA = 0;
+	GLuint Application::s_QuadVB = 0;
+	GLuint Application::s_QuadIB = 0;
+
 	Application::Application(const std::string& name, uint32_t width, uint32_t height)
 	{
 		if (!s_Instance)
@@ -27,10 +31,33 @@ namespace GLCore {
 		m_Window = std::unique_ptr<Window>(Window::Create({ name, width, height }));
 		m_Window->SetEventCallback(BIND_EVENT_FN(OnEvent));
 
-		// Renderer::Init();
-
 		m_ImGuiLayer = new ImGuiLayer();
 		PushOverlay(m_ImGuiLayer);
+
+		// Default quad
+		{
+			glCreateVertexArrays(1, &s_QuadVA);
+			glBindVertexArray(s_QuadVA);
+
+			float vertices[] = {
+				-1.0f, -1.0f,
+				 1.0f, -1.0f,
+				 1.0f,  1.0f,
+				-1.0f,  1.0f
+			};
+
+			glCreateBuffers(1, &s_QuadVB);
+			glBindBuffer(GL_ARRAY_BUFFER, s_QuadVB);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
+
+			uint32_t indices[] = { 0, 1, 2, 2, 3, 0 };
+			glCreateBuffers(1, &s_QuadIB);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_QuadIB);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+		}
 	}
 
 	void Application::PushLayer(Layer* layer)
@@ -47,6 +74,7 @@ namespace GLCore {
 	{
 		EventDispatcher dispatcher(e);
 		dispatcher.Dispatch<WindowCloseEvent>(BIND_EVENT_FN(OnWindowClose));
+		dispatcher.Dispatch<WindowResizeEvent>(BIND_EVENT_FN(OnWindowResize));
 
 		for (auto it = m_LayerStack.end(); it != m_LayerStack.begin(); )
 		{
@@ -64,13 +92,17 @@ namespace GLCore {
 			Timestep timestep = time - m_LastFrameTime;
 			m_LastFrameTime = time;
 
-			for (Layer* layer : m_LayerStack)
-				layer->OnUpdate(timestep);
+			if (!m_Minimized)
+			{
+				for (Layer* layer : m_LayerStack)
+					layer->OnUpdate(timestep);
 
-			m_ImGuiLayer->Begin();
-			for (Layer* layer : m_LayerStack)
-				layer->OnImGuiRender();
-			m_ImGuiLayer->End();
+				m_ImGuiLayer->Begin();
+				for (Layer* layer : m_LayerStack)
+					layer->OnImGuiRender();
+				m_ImGuiLayer->End();
+
+			}
 
 			m_Window->OnUpdate();
 		}
@@ -78,8 +110,25 @@ namespace GLCore {
 
 	bool Application::OnWindowClose(WindowCloseEvent& e)
 	{
+		// Clean default quad
+		glDeleteVertexArrays(1, &s_QuadVA);
+		glDeleteBuffers(1, &s_QuadVB);
+		glDeleteBuffers(1, &s_QuadIB);
+
 		m_Running = false;
 		return true;
+	}
+
+	bool Application::OnWindowResize(WindowResizeEvent& e)
+	{
+		if (e.GetWidth() == 0 || e.GetHeight() == 0)
+		{
+			m_Minimized = true;
+			return false;
+		}
+
+		m_Minimized = false;
+		return false;
 	}
 
 }
