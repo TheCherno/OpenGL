@@ -18,6 +18,11 @@ ImVec2 operator-(const ImVec2& l, const ImVec2& r)
 	return { l.x - r.x, l.y - r.y };
 }
 
+ImVec2 operator*(const ImVec2& vec, float scalar)
+{
+	return { vec.x * scalar, vec.y * scalar };
+}
+
 std::ostream& operator<<(std::ostream& os, const ImVec2& vec)
 {
 	os << '(' << vec.x << ", " << vec.y << ')';
@@ -30,7 +35,6 @@ std::ostream& operator<<(std::ostream& os, const glm::vec<2, T>& vec)
 	os << '(' << vec.x << ", " << vec.y << ')';
 	return os;
 }
-
 
 template<typename T>
 ImVec2 GlmToImVec(const glm::vec<2, T>& vec)
@@ -154,13 +158,18 @@ void main()
 }
 
 MainLayer::MainLayer()
-	: m_Mandelbrot("assets/mandelbrot.glsl")
-	, m_Julia("assets/julia.glsl")
+	: m_MandelbrotSrcPath("assets/mandelbrot.glsl")
+	, m_Mandelbrot(m_MandelbrotSrcPath)
+	, m_JuliaSrcPath("assets/julia.glsl")
+	, m_Julia(m_JuliaSrcPath)
 {
 	RefreshColorFunctions();
 
 	m_Mandelbrot.SetColorFunction(&m_colors[m_selectedColor]);
 	m_Julia.SetColorFunction(&m_colors[m_selectedColor]);
+
+	m_Mandelbrot.SetCenter({ -0.5, 0 });
+	m_Julia.SetRadius(1.3);
 }
 
 MainLayer::~MainLayer()
@@ -182,8 +191,11 @@ void MainLayer::OnUpdate(GLCore::Timestep ts)
 	GLint loc = glGetUniformLocation(m_Julia.GetShader(), "i_JuliaC");
 	glUniform2d(loc, m_JuliaC.x, m_JuliaC.y);
 
-	m_Mandelbrot.Update();
-	m_Julia.Update();
+	if (!m_MandelbrotMinimized)
+		m_Mandelbrot.Update();
+
+	if (!m_JuliaMinimized)
+		m_Julia.Update();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -211,7 +223,7 @@ void MainLayer::OnImGuiRender()
 	}
 
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	ImGui::Begin("DockSpace Demo", &dockspaceOpen, window_flags);
+	ImGui::Begin("DockSpace", &dockspaceOpen, window_flags);
 	ImGui::PopStyleVar();
 
 	if (opt_fullscreen)
@@ -227,41 +239,44 @@ void MainLayer::OnImGuiRender()
 		ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f));
 	}
 
-	ImGui::ShowDemoWindow();
+	//ImGui::ShowDemoWindow();
+	
+	auto mouseDeltaScaled = io.MouseDelta * (m_ResolutionPercentage / 100.f);
 
 	// Mandelbrot
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
-		ImGui::Begin("Mandelbrot");
+		m_MandelbrotMinimized = !ImGui::Begin("Mandelbrot");
+
+		auto mousePos = ImGui::GetMousePos() - ImGui::GetWindowPos() - ImGui::GetWindowContentRegionMin();
+		mousePos = mousePos * (m_ResolutionPercentage / 100.f);
 
 		// Resize
+		ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
+		ImVec2 viewportPanelSizeScaled = viewportPanelSize * (m_ResolutionPercentage / 100.f);
 		{
 			auto size = m_Mandelbrot.GetSize();
-
-			ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
-			if (viewportPanelSize.x != size.x || viewportPanelSize.y != size.y)
+			if (viewportPanelSizeScaled.x != size.x || viewportPanelSizeScaled.y != size.y)
 			{
-				m_Mandelbrot.SetSize({ viewportPanelSize.x, viewportPanelSize.y });
+				m_Mandelbrot.SetSize(glm::vec2{ viewportPanelSizeScaled.x, viewportPanelSizeScaled.y });
 			}
 		}
 
 		// Events
 		if (ImGui::IsWindowHovered())
 		{
-			auto mousePos = ImGui::GetMousePos() - ImGui::GetWindowPos() - ImGui::GetWindowContentRegionMin();
-
 			if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) || 
-				(ImGui::IsMouseDragging(ImGuiMouseButton_Right, 0) && (io.MouseDelta.x != 0 || io.MouseDelta.y != 0)))
+				(ImGui::IsMouseDragging(ImGuiMouseButton_Right, 0) && (mouseDeltaScaled.x != 0 || mouseDeltaScaled.y != 0)))
 			{
 				m_JuliaC = m_Mandelbrot.MapCoordsToPos(mousePos);
 				m_Julia.ResetRender();
 			}
 
-			if (ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0))
+			if (ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0) && mousePos.y >= 0)
 			{
-				if (io.MouseDelta.x != 0 || io.MouseDelta.y != 0)
+				if (mouseDeltaScaled.x != 0 || mouseDeltaScaled.y != 0)
 				{
-					glm::dvec2 center = m_Mandelbrot.MapCoordsToPos(m_Mandelbrot.MapPosToCoords(m_Mandelbrot.GetCenter()) - io.MouseDelta);
+					glm::dvec2 center = m_Mandelbrot.MapCoordsToPos(m_Mandelbrot.MapPosToCoords(m_Mandelbrot.GetCenter()) - mouseDeltaScaled);
 					m_Mandelbrot.SetCenter(center);
 				}
 			}
@@ -284,7 +299,7 @@ void MainLayer::OnImGuiRender()
 			}
 		}
 
-		ImGui::Image((ImTextureID)(intptr_t)m_Mandelbrot.GetTexture(), GlmToImVec(m_Mandelbrot.GetSize()), ImVec2{0, 1}, ImVec2{1, 0});
+		ImGui::Image((ImTextureID)(intptr_t)m_Mandelbrot.GetTexture(), viewportPanelSize, ImVec2{0, 1}, ImVec2{1, 0});
 
 		ImGui::End();
 		ImGui::PopStyleVar();
@@ -293,29 +308,30 @@ void MainLayer::OnImGuiRender()
 	// Julia
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
-		ImGui::Begin("Julia");
+		m_JuliaMinimized = !ImGui::Begin("Julia");
+
+		auto mousePos = ImGui::GetMousePos() - ImGui::GetWindowPos() - ImGui::GetWindowContentRegionMin();
+		mousePos = mousePos * (m_ResolutionPercentage / 100.f);
 
 		// Resize
+		ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
+		ImVec2 viewportPanelSizeScaled = viewportPanelSize * (m_ResolutionPercentage / 100.f);
 		{
 			auto size = m_Julia.GetSize();
-
-			ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
-			if (viewportPanelSize.x != size.x || viewportPanelSize.y != size.y)
+			if (viewportPanelSizeScaled.x != size.x || viewportPanelSizeScaled.y != size.y)
 			{
-				m_Julia.SetSize({ viewportPanelSize.x, viewportPanelSize.y });
+				m_Julia.SetSize(glm::vec2{ viewportPanelSizeScaled.x, viewportPanelSizeScaled.y });
 			}
 		}
 
 		// Events
 		if (ImGui::IsWindowHovered())
 		{
-			auto mousePos = ImGui::GetMousePos() - ImGui::GetWindowPos() - ImGui::GetWindowContentRegionMin();
-
-			if (ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0))
+			if (ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0) && mousePos.y >= 0)
 			{
-				if (io.MouseDelta.x != 0 || io.MouseDelta.y != 0)
+				if (mouseDeltaScaled.x != 0 || mouseDeltaScaled.y != 0)
 				{
-					glm::dvec2 center = m_Julia.MapCoordsToPos(m_Julia.MapPosToCoords(m_Julia.GetCenter()) - io.MouseDelta);
+					glm::dvec2 center = m_Julia.MapCoordsToPos(m_Julia.MapPosToCoords(m_Julia.GetCenter()) - mouseDeltaScaled);
 					m_Julia.SetCenter(center);
 				}
 			}
@@ -338,7 +354,7 @@ void MainLayer::OnImGuiRender()
 			}
 		}
 
-		ImGui::Image((ImTextureID)(intptr_t)m_Julia.GetTexture(), GlmToImVec(m_Julia.GetSize()), ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
+		ImGui::Image((ImTextureID)(intptr_t)m_Julia.GetTexture(), viewportPanelSize, ImVec2{0, 1}, ImVec2{1, 0});
 
 		ImGui::End();
 		ImGui::PopStyleVar();
@@ -351,120 +367,183 @@ void MainLayer::OnImGuiRender()
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, windowBgCol);
 		ImGui::Begin("Controls");
 
+
 		std::stringstream ss;
-		ss << std::fixed << std::setprecision(1) << "General (" << frame_rate << "fps)";
+		ss << std::fixed << std::setprecision(1) << frame_rate << "fps";
 
-		ImGui::AlignTextToFramePadding();
 		ImGui::Text(ss.str().c_str());
-		ImGui::SameLine();
-		if (ImGui::Button("Reload Core Shader"))
-		{
-			m_Mandelbrot.SetShader(m_MandelbrotSrcPath);
-			m_Julia.SetShader(m_JuliaSrcPath);
-		}
-
-		static int itersPerFrame = 100;
-		if (ImGui::DragInt("Iterations per frame", &itersPerFrame, 10, 1, 10000, "%d", ImGuiSliderFlags_AlwaysClamp))
-		{
-			m_Mandelbrot.SetIterationsPerFrame(itersPerFrame);
-			m_Julia.SetIterationsPerFrame(itersPerFrame);
-		}
-
-		double cmin = -2, cmax = 2;
-		glm::dvec2 center = m_Mandelbrot.GetCenter();
-		if (ImGui::DragScalarN("Center", ImGuiDataType_Double, glm::value_ptr(center), 2, (float)m_Mandelbrot.GetRadius() / 70.f, &cmin, &cmax, "%.15f"))
-			m_Mandelbrot.SetCenter(center);
-
-		double rmin = 1e-15, rmax = 50;
-		double radius = m_Mandelbrot.GetRadius();
-		if (ImGui::DragScalar("Radius", ImGuiDataType_Double, &radius, 0.01f, &rmin, &rmax, "%e", ImGuiSliderFlags_Logarithmic))
-			m_Mandelbrot.SetRadius(radius);
-
-		ImGui::Separator();
-		//if (ImGui::DragInt("Resolution percentage", &m_resolutionPercentage, 1, 30, 500, "%d%%", ImGuiSliderFlags_AlwaysClamp))
-		//{
-		//	m_size = GetMultipliedResolution();
-		//	CreateFrameBuffer();
-		//	UpdateRange();
-		//}
-
-		if (ImGui::Button("Screenshot"))
-		{
-			const char* filter = "PNG (*.png)\0*.png\0JPEG (*jpg; *jpeg)\0*.jpg;*.jpeg\0BMP (*.bmp)\0*.bmp\0TGA (*.tga)\0*.tga\0";
-
-			OPENFILENAMEA ofn;
-			CHAR szFile[260];
-
-			auto center = m_Mandelbrot.GetCenter();
-			sprintf_s(szFile, "%.15f,%.15f", center.x, center.y);
-
-			ZeroMemory(&ofn, sizeof(OPENFILENAME));
-			ofn.lStructSize = sizeof(OPENFILENAME);
-			//ofn.hwndOwner = Application::Get().GetWindow().GetNativeWindow(); TODO ;-;
-			ofn.lpstrFile = szFile;
-			ofn.nMaxFile = sizeof(szFile);
-			ofn.lpstrFilter = filter;
-			ofn.nFilterIndex = 1;
-			ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
-
-			// Sets the default extension by extracting it from the filter
-			ofn.lpstrDefExt = strchr(filter, '\0') + 1;
-
-			if (GetSaveFileNameA(&ofn) == TRUE)
-				GLCore::Utils::ExportTexture(m_Mandelbrot.GetTexture(), ofn.lpstrFile);
-		}
 
 		ImGui::Spacing();
-		ImGui::Separator();
-		ImGui::AlignTextToFramePadding();
-		ImGui::Text("Color function");
-		ImGui::SameLine();
 
-		float lineHeight = ImGui::GetFontSize() + style.FramePadding.y * 2.0f;
-		//if (ImGui::Button("+", ImVec2{ lineHeight, lineHeight }))
-		if (ImGui::Button("Refresh"))
-			m_ShouldRefreshColors = true;
-
-		ImGui::SameLine(); HelpMarker("Edit the files (or add) in the 'assets/colors' folder and they will appear here after a refresh");
-
-		ImVec2 button_size = { 100, 50 };
-		float window_visible_x2 = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
-		for (size_t i = 0; i < m_colors.size(); i++)
+		if (ImGui::CollapsingHeader("General"))
 		{
-			ImGui::PushID((int)i);
-
-			if (m_selectedColor == i)
-				ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_ButtonActive]);
-			else
-				ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_Button]);
-
-			if (ImGui::ImageButton((ImTextureID)(intptr_t)m_colorsPreview[i], button_size))
+			static int itersPerFrame = 100;
+			if (ImGui::DragInt("Iterations per frame", &itersPerFrame, 10, 1, 10000, "%d", ImGuiSliderFlags_AlwaysClamp))
 			{
-				m_selectedColor = i;
-				m_Mandelbrot.SetColorFunction(&m_colors[m_selectedColor]);
-				m_Julia.SetColorFunction(&m_colors[m_selectedColor]);
+				m_Mandelbrot.SetIterationsPerFrame(itersPerFrame);
+				m_Julia.SetIterationsPerFrame(itersPerFrame);
 			}
 
-			ImGui::PopStyleColor();
+			if (ImGui::DragInt("Resolution percentage", &m_ResolutionPercentage, 1, 30, 500, "%d%%", ImGuiSliderFlags_AlwaysClamp))
+			{
+				glm::uvec2 mandelbrotSize = (glm::vec2)m_Mandelbrot.GetSize() * (m_ResolutionPercentage / 100.f);
+				m_Mandelbrot.SetSize(mandelbrotSize);
 
-			float last_button_x2 = ImGui::GetItemRectMax().x;
-			float next_button_x2 = last_button_x2 + style.ItemSpacing.x + button_size.x; // Expected position if next button was on same line
+				glm::uvec2 juliaSize = (glm::vec2)m_Mandelbrot.GetSize() * (m_ResolutionPercentage / 100.f);
+				m_Julia.SetSize(juliaSize);
+			}
 
-			if (i + 1 < m_colors.size() && next_button_x2 < window_visible_x2)
-				ImGui::SameLine();
+			ImGui::Spacing();
+		}
 
+		if (ImGui::CollapsingHeader("Color function"))
+		{
+
+			if (ImGui::Button("Refresh"))
+				m_ShouldRefreshColors = true;
+
+			ImGui::SameLine(); HelpMarker("Edit the files (or add) in the 'assets/colors' folder and they will appear here after a refresh");
+
+			ImVec2 button_size = { 100, 50 };
+			float window_visible_x2 = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
+			for (size_t i = 0; i < m_colors.size(); i++)
+			{
+				ImGui::PushID((int)i);
+
+				if (m_selectedColor == i)
+					ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_ButtonActive]);
+				else
+					ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_Button]);
+
+				if (ImGui::ImageButton((ImTextureID)(intptr_t)m_colorsPreview[i], button_size))
+				{
+					m_selectedColor = i;
+					m_Mandelbrot.SetColorFunction(&m_colors[m_selectedColor]);
+					m_Julia.SetColorFunction(&m_colors[m_selectedColor]);
+				}
+
+				ImGui::PopStyleColor();
+
+				float last_button_x2 = ImGui::GetItemRectMax().x;
+				float next_button_x2 = last_button_x2 + style.ItemSpacing.x + button_size.x; // Expected position if next button was on same line
+
+				if (i + 1 < m_colors.size() && next_button_x2 < window_visible_x2)
+					ImGui::SameLine();
+
+				ImGui::PopID();
+			}
+
+			ImGui::Spacing();
+			ImGui::Text("Color function parameters");
+			for (auto& u : m_colors[m_selectedColor].GetUniforms())
+			{
+				if (ImGui::DragFloat(u.name.c_str(), &u.val, 1, u.range.x, u.range.y))
+				{
+					m_Mandelbrot.ResetRender();
+					m_Julia.ResetRender();
+				}
+			}
+
+			ImGui::Spacing();
+		}
+
+		if (ImGui::CollapsingHeader("Mandelbrot"))
+		{
+			ImGui::PushID(0);
+
+			if (ImGui::Button("Reload Mandelbrot Shader"))
+				m_Mandelbrot.SetShader(m_MandelbrotSrcPath);
+
+			double cmin = -2, cmax = 2;
+			glm::dvec2 center = m_Mandelbrot.GetCenter();
+			if (ImGui::DragScalarN("Center", ImGuiDataType_Double, glm::value_ptr(center), 2, (float)m_Mandelbrot.GetRadius() / 70.f, &cmin, &cmax, "%.15f"))
+				m_Mandelbrot.SetCenter(center);
+
+			double rmin = 1e-15, rmax = 50;
+			double radius = m_Mandelbrot.GetRadius();
+			if (ImGui::DragScalar("Radius", ImGuiDataType_Double, &radius, 0.01f, &rmin, &rmax, "%e", ImGuiSliderFlags_Logarithmic))
+				m_Mandelbrot.SetRadius(radius);
+
+
+			if (ImGui::Button("Screenshot"))
+			{
+				const char* filter = "PNG (*.png)\0*.png\0JPEG (*jpg; *jpeg)\0*.jpg;*.jpeg\0BMP (*.bmp)\0*.bmp\0TGA (*.tga)\0*.tga\0";
+
+				OPENFILENAMEA ofn;
+				CHAR szFile[260];
+
+				auto center = m_Mandelbrot.GetCenter();
+				sprintf_s(szFile, "mandelbrot_%.15f,%.15f", center.x, center.y);
+
+				ZeroMemory(&ofn, sizeof(OPENFILENAME));
+				ofn.lStructSize = sizeof(OPENFILENAME);
+				//ofn.hwndOwner = Application::Get().GetWindow().GetNativeWindow(); TODO ;-;
+				ofn.lpstrFile = szFile;
+				ofn.nMaxFile = sizeof(szFile);
+				ofn.lpstrFilter = filter;
+				ofn.nFilterIndex = 1;
+				ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
+
+				// Sets the default extension by extracting it from the filter
+				ofn.lpstrDefExt = strchr(filter, '\0') + 1;
+
+				if (GetSaveFileNameA(&ofn) == TRUE)
+					GLCore::Utils::ExportTexture(m_Mandelbrot.GetTexture(), ofn.lpstrFile);
+			}
+
+			ImGui::Spacing();
 			ImGui::PopID();
 		}
 
-		ImGui::Spacing();
-		ImGui::Text("Color function parameters");
-		for (auto& u : m_colors[m_selectedColor].GetUniforms())
+		if (ImGui::CollapsingHeader("Julia"))
 		{
-			if (ImGui::DragFloat(u.name.c_str(), &u.val, 1, u.range.x, u.range.y))
-			{
-				m_Mandelbrot.ResetRender();
+			ImGui::PushID(1);
+
+			if (ImGui::Button("Reload Julia Shader"))
+				m_Julia.SetShader(m_JuliaSrcPath);
+
+			double cmin = -2, cmax = 2;
+			glm::dvec2 center = m_Julia.GetCenter();
+			if (ImGui::DragScalarN("Center", ImGuiDataType_Double, glm::value_ptr(center), 2, (float)m_Julia.GetRadius() / 200.f, &cmin, &cmax, "%.15f"))
+				m_Julia.SetCenter(center);
+
+			double rmin = 1e-15, rmax = 50;
+			double radius = m_Julia.GetRadius();
+			if (ImGui::DragScalar("Radius", ImGuiDataType_Double, &radius, 0.01f, &rmin, &rmax, "%e", ImGuiSliderFlags_Logarithmic))
+				m_Julia.SetRadius(radius);
+
+			if (ImGui::DragScalarN("C value", ImGuiDataType_Double, glm::value_ptr(m_JuliaC), 2, (float)m_Julia.GetRadius() / 70.f, &cmin, &cmax, "%.15f"))
 				m_Julia.ResetRender();
+
+
+			if (ImGui::Button("Screenshot"))
+			{
+				const char* filter = "PNG (*.png)\0*.png\0JPEG (*jpg; *jpeg)\0*.jpg;*.jpeg\0BMP (*.bmp)\0*.bmp\0TGA (*.tga)\0*.tga\0";
+
+				OPENFILENAMEA ofn;
+				CHAR szFile[260];
+
+				//auto center = m_Julia.GetCenter();
+				sprintf_s(szFile, "julia_%.15f,%.15f", m_JuliaC.x, m_JuliaC.y);
+
+				ZeroMemory(&ofn, sizeof(OPENFILENAME));
+				ofn.lStructSize = sizeof(OPENFILENAME);
+				//ofn.hwndOwner = Application::Get().GetWindow().GetNativeWindow(); TODO ;-;
+				ofn.lpstrFile = szFile;
+				ofn.nMaxFile = sizeof(szFile);
+				ofn.lpstrFilter = filter;
+				ofn.nFilterIndex = 1;
+				ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
+
+				// Sets the default extension by extracting it from the filter
+				ofn.lpstrDefExt = strchr(filter, '\0') + 1;
+
+				if (GetSaveFileNameA(&ofn) == TRUE)
+					GLCore::Utils::ExportTexture(m_Julia.GetTexture(), ofn.lpstrFile);
 			}
+
+			ImGui::Spacing();
+			ImGui::PopID();
 		}
 
 		ImGui::End(); // Controls

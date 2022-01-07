@@ -3,11 +3,11 @@
 #include <fstream>
 #include <filesystem>
 
+
 static double map(const double& value, const double& inputMin, const double& inputMax, const double& outputMin, const double& outputMax)
 {
 	return outputMin + ((outputMax - outputMin) / (inputMax - inputMin)) * (value - inputMin);
 }
-
 
 FractalVisualizer::FractalVisualizer(const std::string& shaderSrcPath)
 {
@@ -21,6 +21,9 @@ FractalVisualizer::~FractalVisualizer()
 
 void FractalVisualizer::Update()
 {
+	if (m_Size.x <= 0 || m_Size.y <= 0)
+		return;
+
 	if (m_ShouldCreateFramebuffer)
 	{
 		m_ShouldCreateFramebuffer = false; 
@@ -126,9 +129,6 @@ void FractalVisualizer::SetShader(const std::string& shaderSrcPath)
 void FractalVisualizer::SetColorFunction(ColorFunction* const colorFunc)
 {
 	m_ColorFunction = colorFunc;
-	
-	//if (m_ColorFunction == nullptr)
-	//	return;
 
 	std::string source = m_ShaderSrc;
 	size_t color_loc = source.find("#color");
