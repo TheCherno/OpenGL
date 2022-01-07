@@ -512,7 +512,7 @@ void MainLayer::OnImGuiRender()
 			if (ImGui::DragScalar("Radius", ImGuiDataType_Double, &radius, 0.01f, &rmin, &rmax, "%e", ImGuiSliderFlags_Logarithmic))
 				m_Julia.SetRadius(radius);
 
-			if (ImGui::DragScalarN("C value", ImGuiDataType_Double, glm::value_ptr(m_JuliaC), 2, (float)m_Julia.GetRadius() / 70.f, &cmin, &cmax, "%.15f"))
+			if (ImGui::DragScalarN("C value", ImGuiDataType_Double, glm::value_ptr(m_JuliaC), 2, (float)m_Julia.GetRadius() * 1e-5f, &cmin, &cmax, "%.15f"))
 				m_Julia.ResetRender();
 
 
