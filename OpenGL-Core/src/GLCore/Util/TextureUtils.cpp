@@ -51,7 +51,7 @@ namespace GLCore::Utils {
             }
             else if (extension == "jpg" || extension == "jpeg")
             {
-                if (stbi_write_jpg(filename.c_str(), width, height, 4, &pixels[0], 90))
+                if (stbi_write_jpg(filename.c_str(), width, height, 4, pixels, 90))
                     return true;
             }
 

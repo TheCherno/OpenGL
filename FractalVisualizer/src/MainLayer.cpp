@@ -7,7 +7,6 @@
 #include <fstream>
 #include <commdlg.h>
 
-
 ImVec2 operator+(const ImVec2& l, const ImVec2& r)
 {
 	return { l.x + r.x, l.y + r.y };
@@ -54,6 +53,28 @@ static void HelpMarker(const char* desc)
 		ImGui::EndTooltip();
 	}
 }
+
+template<size_t file_size>
+static bool SaveImageDialog(char(&fileName)[file_size])
+{
+	const char* filter = "PNG (*.png)\0*.png\0JPEG (*jpg; *jpeg)\0*.jpg;*.jpeg\0BMP (*.bmp)\0*.bmp\0TGA (*.tga)\0*.tga\0";
+
+	OPENFILENAMEA ofn;
+	ZeroMemory(&ofn, sizeof(OPENFILENAME));
+	ofn.lStructSize = sizeof(OPENFILENAME);
+	//ofn.hwndOwner = Application::Get().GetWindow().GetNativeWindow(); TODO ;-;
+	ofn.lpstrFile = fileName;
+	ofn.nMaxFile = sizeof(fileName);
+	ofn.lpstrFilter = filter;
+	ofn.nFilterIndex = 1;
+	ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
+
+	// Sets the default extension by extracting it from the filter
+	ofn.lpstrDefExt = strchr(filter, '\0') + 1;
+
+	return GetSaveFileNameA(&ofn) == TRUE;
+}
+
 
 void MainLayer::RefreshColorFunctions()
 {
@@ -467,28 +488,12 @@ void MainLayer::OnImGuiRender()
 
 			if (ImGui::Button("Screenshot"))
 			{
-				const char* filter = "PNG (*.png)\0*.png\0JPEG (*jpg; *jpeg)\0*.jpg;*.jpeg\0BMP (*.bmp)\0*.bmp\0TGA (*.tga)\0*.tga\0";
-
-				OPENFILENAMEA ofn;
-				CHAR szFile[260];
-
+				CHAR fileName[260];
 				auto center = m_Mandelbrot.GetCenter();
-				sprintf_s(szFile, "mandelbrot_%.15f,%.15f", center.x, center.y);
+				sprintf_s(fileName, "mandelbrot_%.15f,%.15f", center.x, center.y);
 
-				ZeroMemory(&ofn, sizeof(OPENFILENAME));
-				ofn.lStructSize = sizeof(OPENFILENAME);
-				//ofn.hwndOwner = Application::Get().GetWindow().GetNativeWindow(); TODO ;-;
-				ofn.lpstrFile = szFile;
-				ofn.nMaxFile = sizeof(szFile);
-				ofn.lpstrFilter = filter;
-				ofn.nFilterIndex = 1;
-				ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
-
-				// Sets the default extension by extracting it from the filter
-				ofn.lpstrDefExt = strchr(filter, '\0') + 1;
-
-				if (GetSaveFileNameA(&ofn) == TRUE)
-					GLCore::Utils::ExportTexture(m_Mandelbrot.GetTexture(), ofn.lpstrFile);
+				if (SaveImageDialog(fileName))
+					GLCore::Utils::ExportTexture(m_Mandelbrot.GetTexture(), fileName);
 			}
 
 			ImGui::Spacing();
@@ -518,28 +523,11 @@ void MainLayer::OnImGuiRender()
 
 			if (ImGui::Button("Screenshot"))
 			{
-				const char* filter = "PNG (*.png)\0*.png\0JPEG (*jpg; *jpeg)\0*.jpg;*.jpeg\0BMP (*.bmp)\0*.bmp\0TGA (*.tga)\0*.tga\0";
+				CHAR fileName[260];
+				sprintf_s(fileName, "julia_%.15f,%.15f", m_JuliaC.x, m_JuliaC.y);
 
-				OPENFILENAMEA ofn;
-				CHAR szFile[260];
-
-				//auto center = m_Julia.GetCenter();
-				sprintf_s(szFile, "julia_%.15f,%.15f", m_JuliaC.x, m_JuliaC.y);
-
-				ZeroMemory(&ofn, sizeof(OPENFILENAME));
-				ofn.lStructSize = sizeof(OPENFILENAME);
-				//ofn.hwndOwner = Application::Get().GetWindow().GetNativeWindow(); TODO ;-;
-				ofn.lpstrFile = szFile;
-				ofn.nMaxFile = sizeof(szFile);
-				ofn.lpstrFilter = filter;
-				ofn.nFilterIndex = 1;
-				ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
-
-				// Sets the default extension by extracting it from the filter
-				ofn.lpstrDefExt = strchr(filter, '\0') + 1;
-
-				if (GetSaveFileNameA(&ofn) == TRUE)
-					GLCore::Utils::ExportTexture(m_Julia.GetTexture(), ofn.lpstrFile);
+				if (SaveImageDialog(fileName))
+					GLCore::Utils::ExportTexture(m_Julia.GetTexture(), fileName);
 			}
 
 			ImGui::Spacing();
