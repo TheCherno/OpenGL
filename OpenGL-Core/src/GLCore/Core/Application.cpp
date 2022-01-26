@@ -36,7 +36,7 @@ namespace GLCore {
 
 		// Default quad
 		{
-			glCreateVertexArrays(1, &s_QuadVA);
+			glGenVertexArrays(1, &s_QuadVA);
 			glBindVertexArray(s_QuadVA);
 
 			float vertices[] = {
@@ -46,7 +46,7 @@ namespace GLCore {
 				-1.0f,  1.0f
 			};
 
-			glCreateBuffers(1, &s_QuadVB);
+			glGenBuffers(1, &s_QuadVB);
 			glBindBuffer(GL_ARRAY_BUFFER, s_QuadVB);
 			glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
@@ -54,7 +54,7 @@ namespace GLCore {
 			glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
 
 			uint32_t indices[] = { 0, 1, 2, 2, 3, 0 };
-			glCreateBuffers(1, &s_QuadIB);
+			glGenBuffers(1, &s_QuadIB);
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_QuadIB);
 			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 		}

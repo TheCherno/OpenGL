@@ -60,6 +60,12 @@ void FractalVisualizer::Update()
 	location = glGetUniformLocation(m_Shader, "i_yRange");
 	glUniform2d(location, yRange.x, yRange.y);
 
+	location = glGetUniformLocation(m_Shader, "i_Data");
+	glUniform1i(location, 0);
+
+	location = glGetUniformLocation(m_Shader, "i_Iter");
+	glUniform1i(location, 1);
+
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, m_InData);
 
@@ -68,31 +74,36 @@ void FractalVisualizer::Update()
 
 	// Draw
 	glViewport(0, 0, m_Size.x, m_Size.y);
-	glBindFramebuffer(GL_FRAMEBUFFER, m_FrameBuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	if (m_Frame == 0)
-	{
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	}
+		glDisable(GL_BLEND);
 
 	glBindVertexArray(GLCore::Application::GetDefaultQuadVA());
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
-
 	// Copy output buffers into input buffers
-	glCopyImageSubData(
-		m_OutData, GL_TEXTURE_2D, 0, 0, 0, 0,
-		m_InData, GL_TEXTURE_2D, 0, 0, 0, 0,
-		m_Size.x, m_Size.y, 1);
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
+		glReadBuffer(GL_COLOR_ATTACHMENT1); // Out data
 
-	glCopyImageSubData(
-		m_OutIter, GL_TEXTURE_2D, 0, 0, 0, 0,
-		m_InIter, GL_TEXTURE_2D, 0, 0, 0, 0,
-		m_Size.x, m_Size.y, 1);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, m_InData);
+
+		glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32UI, 0, 0, m_Size.x, m_Size.y, 0);
+
+
+		glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
+		glReadBuffer(GL_COLOR_ATTACHMENT2); // Out iter
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, m_InIter);
+
+		glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RG32UI, 0, 0, m_Size.x, m_Size.y, 0);
+	}
 	
 	m_Frame++;
 }
@@ -204,7 +215,7 @@ glm::dvec2 FractalVisualizer::MapCoordsToPos(const ImVec2& coords) const
 
 void FractalVisualizer::DeleteFramebuffer()
 {
-	glDeleteFramebuffers(1, &m_FrameBuffer);
+	glDeleteFramebuffers(1, &m_FBO);
 
 	GLuint textures[] = { m_Texture, m_InData, m_OutData, m_InIter, m_OutIter };
 	glDeleteTextures(IM_ARRAYSIZE(textures), textures);
@@ -212,58 +223,57 @@ void FractalVisualizer::DeleteFramebuffer()
 
 void FractalVisualizer::CreateFramebuffer()
 {
-	// Framebuffer
-	glGenFramebuffers(1, &m_FrameBuffer);
-	glBindFramebuffer(GL_FRAMEBUFFER, m_FrameBuffer);
+	glGenFramebuffers(1, &m_FBO);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_FBO);
 
+	// Main texture
 	glGenTextures(1, &m_Texture);
 	glBindTexture(GL_TEXTURE_2D, m_Texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_Size.x, m_Size.y, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_Size.x, m_Size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_FrameBuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_FBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_Texture, 0);
 
-	// Out Data
+	// Out data
 	glGenTextures(1, &m_OutData);
 	glBindTexture(GL_TEXTURE_2D, m_OutData);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32UI, m_Size.x, m_Size.y, 0, GL_RGBA_INTEGER, GL_UNSIGNED_INT, nullptr);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_FrameBuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_FBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, m_OutData, 0);
 
-	// In Data
-	glGenTextures(1, &m_InData);
-	glBindTexture(GL_TEXTURE_2D, m_InData);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32UI, m_Size.x, m_Size.y, 0, GL_RGBA_INTEGER, GL_UNSIGNED_INT, nullptr);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	// Out Iter
+	// Out iter
 	glGenTextures(1, &m_OutIter);
 	glBindTexture(GL_TEXTURE_2D, m_OutIter);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32UI, m_Size.x, m_Size.y, 0, GL_RG_INTEGER, GL_UNSIGNED_INT, nullptr);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_FrameBuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_FBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, m_OutIter, 0);
 
-	// In Data
-	glGenTextures(1, &m_InIter);
-	glBindTexture(GL_TEXTURE_2D, m_InIter);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32UI, m_Size.x, m_Size.y, 0, GL_RG_INTEGER, GL_UNSIGNED_INT, nullptr);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
+	glBindFramebuffer(GL_FRAMEBUFFER, m_FBO);
 	GLenum bufs[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2 };
-	glDrawBuffers(3, bufs);
+	glDrawBuffers(IM_ARRAYSIZE(bufs), bufs);
 
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 	{
 		std::cout << "Error creating framebuffer (" << m_Size.x << ", " << m_Size.y << ")\n";
 	}
+
+	glGenTextures(1, &m_InData);
+	glBindTexture(GL_TEXTURE_2D, m_InData);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32UI, m_Size.x, m_Size.y, 0, GL_RGBA_INTEGER, GL_UNSIGNED_INT, nullptr);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	glGenTextures(1, &m_InIter);
+	glBindTexture(GL_TEXTURE_2D, m_InIter);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG32UI, m_Size.x, m_Size.y, 0, GL_RG_INTEGER, GL_UNSIGNED_INT, nullptr);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 }

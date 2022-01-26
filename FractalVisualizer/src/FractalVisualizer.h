@@ -65,7 +65,8 @@ private:
 	GLuint m_Shader = 0;
 
 	// Drawing stuff
-	GLuint m_FrameBuffer, m_Texture;
-	GLuint m_InData, m_OutData, m_InIter, m_OutIter;
+	GLuint m_FBO, m_Texture;
+	GLuint m_InData, m_OutData;
+	GLuint m_InIter, m_OutIter;
 };
 
