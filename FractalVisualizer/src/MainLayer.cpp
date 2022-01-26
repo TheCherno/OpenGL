@@ -7,6 +7,8 @@
 #include <fstream>
 #include <commdlg.h>
 
+#include <imgui_internal.h>
+
 ImVec2 operator+(const ImVec2& l, const ImVec2& r)
 {
 	return { l.x + r.x, l.y + r.y };
@@ -55,7 +57,7 @@ static void HelpMarker(const char* desc)
 }
 
 template<size_t file_size>
-static bool SaveImageDialog(char(&fileName)[file_size])
+static bool SaveImageDialog(char (&fileName)[file_size])
 {
 	const char* filter = "PNG (*.png)\0*.png\0JPEG (*jpg; *jpeg)\0*.jpg;*.jpeg\0BMP (*.bmp)\0*.bmp\0TGA (*.tga)\0*.tga\0";
 
@@ -120,7 +122,7 @@ void MainLayer::RefreshColorFunctions()
 
 			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			{
-				std::cout << "NOT TOTOTOTOTOT\n";
+				std::cout << "Failed to create the color function preview framebuffer\n";
 				exit(EXIT_FAILURE);
 			}
 
@@ -176,6 +178,7 @@ void main()
 		m_selectedColor = 0;
 
 	m_Mandelbrot.SetColorFunction(&m_colors[m_selectedColor]);
+	m_Julia.SetColorFunction(&m_colors[m_selectedColor]);
 }
 
 MainLayer::MainLayer()
@@ -188,6 +191,9 @@ MainLayer::MainLayer()
 
 	m_Mandelbrot.SetColorFunction(&m_colors[m_selectedColor]);
 	m_Julia.SetColorFunction(&m_colors[m_selectedColor]);
+
+	m_Mandelbrot.SetIterationsPerFrame(m_ItersPerFrame);
+	m_Julia.SetIterationsPerFrame(m_ItersPerFrame);
 
 	m_Mandelbrot.SetCenter({ -0.5, 0 });
 	m_Julia.SetRadius(1.3);
@@ -209,6 +215,7 @@ void MainLayer::OnUpdate(GLCore::Timestep ts)
 		m_ShouldRefreshColors = false;
 	}
 
+	glUseProgram(m_Julia.GetShader());
 	GLint loc = glGetUniformLocation(m_Julia.GetShader(), "i_JuliaC");
 	glUniform2d(loc, m_JuliaC.x, m_JuliaC.y);
 
@@ -222,6 +229,16 @@ void MainLayer::OnUpdate(GLCore::Timestep ts)
 
 	glClearColor(0.0f, 1.0f, 1.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+void DisableBlendCallback(const ImDrawList* parent_list, const ImDrawCmd* cmd)
+{
+	glDisable(GL_BLEND);
+}
+
+void EnableBlendCallback(const ImDrawList* parent_list, const ImDrawCmd* cmd)
+{
+	glEnable(GL_BLEND);
 }
 
 void MainLayer::OnImGuiRender()
@@ -320,7 +337,9 @@ void MainLayer::OnImGuiRender()
 			}
 		}
 
+		ImGui::GetCurrentWindow()->DrawList->AddCallback(DisableBlendCallback, nullptr);
 		ImGui::Image((ImTextureID)(intptr_t)m_Mandelbrot.GetTexture(), viewportPanelSize, ImVec2{0, 1}, ImVec2{1, 0});
+		ImGui::GetCurrentWindow()->DrawList->AddCallback(EnableBlendCallback, nullptr);
 
 		ImGui::End();
 		ImGui::PopStyleVar();
@@ -375,7 +394,9 @@ void MainLayer::OnImGuiRender()
 			}
 		}
 
+		ImGui::GetCurrentWindow()->DrawList->AddCallback(DisableBlendCallback, nullptr);
 		ImGui::Image((ImTextureID)(intptr_t)m_Julia.GetTexture(), viewportPanelSize, ImVec2{0, 1}, ImVec2{1, 0});
+		ImGui::GetCurrentWindow()->DrawList->AddCallback(EnableBlendCallback, nullptr);
 
 		ImGui::End();
 		ImGui::PopStyleVar();
@@ -398,11 +419,10 @@ void MainLayer::OnImGuiRender()
 
 		if (ImGui::CollapsingHeader("General"))
 		{
-			static int itersPerFrame = 100;
-			if (ImGui::DragInt("Iterations per frame", &itersPerFrame, 10, 1, 10000, "%d", ImGuiSliderFlags_AlwaysClamp))
+			if (ImGui::DragInt("Iterations per frame", &m_ItersPerFrame, 10, 1, 10000, "%d", ImGuiSliderFlags_AlwaysClamp))
 			{
-				m_Mandelbrot.SetIterationsPerFrame(itersPerFrame);
-				m_Julia.SetIterationsPerFrame(itersPerFrame);
+				m_Mandelbrot.SetIterationsPerFrame(m_ItersPerFrame);
+				m_Julia.SetIterationsPerFrame(m_ItersPerFrame);
 			}
 
 			if (ImGui::DragInt("Resolution percentage", &m_ResolutionPercentage, 1, 30, 500, "%d%%", ImGuiSliderFlags_AlwaysClamp))
@@ -486,14 +506,14 @@ void MainLayer::OnImGuiRender()
 				m_Mandelbrot.SetRadius(radius);
 
 
-			if (ImGui::Button("Screenshot"))
+			if (ImGui::Button("Screenshot##MandelbrotB"))
 			{
 				CHAR fileName[260];
 				auto center = m_Mandelbrot.GetCenter();
 				sprintf_s(fileName, "mandelbrot_%.15f,%.15f", center.x, center.y);
 
 				if (SaveImageDialog(fileName))
-					GLCore::Utils::ExportTexture(m_Mandelbrot.GetTexture(), fileName);
+					GLCore::Utils::ExportTexture(m_Mandelbrot.GetTexture(), fileName, true);
 			}
 
 			ImGui::Spacing();
@@ -521,13 +541,13 @@ void MainLayer::OnImGuiRender()
 				m_Julia.ResetRender();
 
 
-			if (ImGui::Button("Screenshot"))
+			if (ImGui::Button("Screenshot##JuliaB"))
 			{
 				CHAR fileName[260];
 				sprintf_s(fileName, "julia_%.15f,%.15f", m_JuliaC.x, m_JuliaC.y);
 
 				if (SaveImageDialog(fileName))
-					GLCore::Utils::ExportTexture(m_Julia.GetTexture(), fileName);
+					GLCore::Utils::ExportTexture(m_Julia.GetTexture(), fileName, true);
 			}
 
 			ImGui::Spacing();
