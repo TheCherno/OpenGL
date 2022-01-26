@@ -14,7 +14,7 @@ namespace GLCore::Utils {
         return str;
     }
 
-	bool ExportTexture(GLuint textureID, const std::string& filename)
+    bool ExportTexture(GLuint textureID, const std::string& filename, bool ignore_alpha)
 	{
 		glBindTexture(GL_TEXTURE_2D, textureID);
 
@@ -27,13 +27,16 @@ namespace GLCore::Utils {
 			BYTE* pixels = new BYTE[width * height * 4];
 
 			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-			stbi_flip_vertically_on_write(1);
+
+            if (ignore_alpha)
+                for (int i = 0; i < width * height; i++)
+                    pixels[i*4 + 3] = 255;
 
             // Code from SFML
-            // Extract the extension
             const std::size_t dot = filename.find_last_of('.');
             const std::string extension = dot != std::string::npos ? ToLower(filename.substr(dot + 1)) : "";
 
+			stbi_flip_vertically_on_write(1);
             if (extension == "bmp")
             {
                 if (stbi_write_bmp(filename.c_str(), width, height, 4, pixels))

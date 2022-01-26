@@ -5,6 +5,6 @@
 
 namespace GLCore::Utils {
 
-	bool ExportTexture(GLuint textureID, const std::string& path);
+	bool ExportTexture(GLuint textureID, const std::string& path, bool ignore_alpha = false);
 
 }
