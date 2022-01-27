@@ -25,6 +25,7 @@ private:
 
 	int m_ResolutionPercentage = 100;
 	int m_ItersPerFrame = 100;
+	int m_MaxEpochs = 0;
 
 	std::vector<GLuint> m_colorsPreview;
 	std::vector<ColorFunction> m_colors;
@@ -39,6 +40,5 @@ private:
 	bool m_JuliaMinimized = true;
 	std::string m_JuliaSrcPath;
 	FractalVisualizer m_Julia;
-
 };
 

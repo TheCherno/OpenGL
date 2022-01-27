@@ -52,6 +52,9 @@ void FractalVisualizer::Update()
 	location = glGetUniformLocation(m_Shader, "i_Frame");
 	glUniform1ui(location, m_Frame);
 
+	location = glGetUniformLocation(m_Shader, "i_MaxEpochs");
+	glUniform1ui(location, m_MaxEpochs);
+
 	auto [xRange, yRange] = GetRange();
 
 	location = glGetUniformLocation(m_Shader, "i_xRange");
@@ -176,6 +179,14 @@ void FractalVisualizer::SetIterationsPerFrame(int iterationsPerFrame)
 {
 	m_IterationsPerFrame = iterationsPerFrame;
 	ResetRender();
+}
+
+void FractalVisualizer::SetMaxEpochs(int maxEpochs)
+{
+	if (maxEpochs != m_MaxEpochs && ((maxEpochs < m_MaxEpochs && maxEpochs != 0) || m_MaxEpochs == 0))
+		ResetRender();
+
+	m_MaxEpochs = maxEpochs;
 }
 
 void FractalVisualizer::ResetRender()

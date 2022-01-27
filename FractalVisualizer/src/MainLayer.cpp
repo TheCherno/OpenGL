@@ -77,7 +77,6 @@ static bool SaveImageDialog(char (&fileName)[file_size])
 	return GetSaveFileNameA(&ofn) == TRUE;
 }
 
-
 void MainLayer::RefreshColorFunctions()
 {
 	// Crear previews colors
@@ -193,6 +192,9 @@ MainLayer::MainLayer()
 	m_Mandelbrot.SetIterationsPerFrame(m_ItersPerFrame);
 	m_Julia.SetIterationsPerFrame(m_ItersPerFrame);
 
+	m_Mandelbrot.SetMaxEpochs(m_MaxEpochs);
+	m_Julia.SetMaxEpochs(m_MaxEpochs);
+
 	m_Mandelbrot.SetCenter({ -0.5, 0 });
 	m_Julia.SetRadius(1.3);
 }
@@ -239,6 +241,53 @@ void EnableBlendCallback(const ImDrawList* parent_list, const ImDrawCmd* cmd)
 	glEnable(GL_BLEND);
 }
 
+void FractalHandleInteract(FractalVisualizer& fract, int resolution_percentage)
+{
+	ImGuiIO& io = ImGui::GetIO();
+	auto mouseDeltaScaled = io.MouseDelta * (resolution_percentage / 100.f);
+
+	auto mousePos = ImGui::GetMousePos() - ImGui::GetWindowPos() - ImGui::GetWindowContentRegionMin();
+	mousePos = mousePos * (resolution_percentage / 100.f);
+
+	
+	if (ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0) && mousePos.y >= 0)
+	{
+		if (mouseDeltaScaled.x != 0 || mouseDeltaScaled.y != 0)
+		{
+			glm::dvec2 center = fract.MapCoordsToPos(fract.MapPosToCoords(fract.GetCenter()) - mouseDeltaScaled);
+			fract.SetCenter(center);
+		}
+	}
+
+	if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && io.KeyCtrl)
+	{
+		fract.SetCenter(fract.MapCoordsToPos(mousePos));
+	}
+
+	if (io.MouseWheel != 0)
+	{
+		glm::dvec2 iMousePos = fract.MapCoordsToPos(mousePos);
+
+		fract.SetRadius(fract.GetRadius() / std::pow(1.1f, io.MouseWheel));
+
+		glm::dvec2 fMousePos = fract.MapCoordsToPos(mousePos);
+
+		glm::dvec2 delta = fMousePos - iMousePos;
+		fract.SetCenter(fract.GetCenter() - delta);
+	}
+}
+
+void FractalHandleResize(FractalVisualizer& fract, int resolution_percentage)
+{
+	ImVec2 viewportPanelSizeScaled = ImGui::GetContentRegionAvail() * (resolution_percentage / 100.f);
+
+	auto size = fract.GetSize();
+	if (glm::uvec2{ viewportPanelSizeScaled.x, viewportPanelSizeScaled.y } != size)
+	{
+		fract.SetSize(glm::uvec2{ viewportPanelSizeScaled.x, viewportPanelSizeScaled.y });
+	}
+}
+
 void MainLayer::OnImGuiRender()
 {
 	static bool dockspaceOpen = true;
@@ -276,67 +325,32 @@ void MainLayer::OnImGuiRender()
 	}
 
 	//ImGui::ShowDemoWindow();
-	
-	auto mouseDeltaScaled = io.MouseDelta * (m_ResolutionPercentage / 100.f);
 
 	// Mandelbrot
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
 		m_MandelbrotMinimized = !ImGui::Begin("Mandelbrot");
 
-		auto mousePos = ImGui::GetMousePos() - ImGui::GetWindowPos() - ImGui::GetWindowContentRegionMin();
-		mousePos = mousePos * (m_ResolutionPercentage / 100.f);
-
 		// Resize
-		ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
-		ImVec2 viewportPanelSizeScaled = viewportPanelSize * (m_ResolutionPercentage / 100.f);
-		{
-			auto size = m_Mandelbrot.GetSize();
-			if (viewportPanelSizeScaled.x != size.x || viewportPanelSizeScaled.y != size.y)
-			{
-				m_Mandelbrot.SetSize(glm::vec2{ viewportPanelSizeScaled.x, viewportPanelSizeScaled.y });
-			}
-		}
+		FractalHandleResize(m_Mandelbrot, m_ResolutionPercentage);
 
 		// Events
 		if (ImGui::IsWindowHovered())
 		{
-			if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) || 
-				(ImGui::IsMouseDragging(ImGuiMouseButton_Right, 0) && (mouseDeltaScaled.x != 0 || mouseDeltaScaled.y != 0)))
+			FractalHandleInteract(m_Mandelbrot, m_ResolutionPercentage);
+
+			// Right click to set `julia c`
+			if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) ||
+				(ImGui::IsMouseDragging(ImGuiMouseButton_Right, 0) && (io.MouseDelta.x != 0 || io.MouseDelta.y != 0)))
 			{
+				auto mousePos = (ImGui::GetMousePos() - ImGui::GetWindowPos() - ImGui::GetWindowContentRegionMin()) * (m_ResolutionPercentage / 100.f);
 				m_JuliaC = m_Mandelbrot.MapCoordsToPos(mousePos);
 				m_Julia.ResetRender();
-			}
-
-			if (ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0) && mousePos.y >= 0)
-			{
-				if (mouseDeltaScaled.x != 0 || mouseDeltaScaled.y != 0)
-				{
-					glm::dvec2 center = m_Mandelbrot.MapCoordsToPos(m_Mandelbrot.MapPosToCoords(m_Mandelbrot.GetCenter()) - mouseDeltaScaled);
-					m_Mandelbrot.SetCenter(center);
-				}
-			}
-
-			if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && io.KeyCtrl)
-			{
-				m_Mandelbrot.SetCenter(m_Mandelbrot.MapCoordsToPos(mousePos));
-			}
-
-			if (io.MouseWheel != 0)
-			{
-				glm::dvec2 iMousePos = m_Mandelbrot.MapCoordsToPos(mousePos);
-
-				m_Mandelbrot.SetRadius(m_Mandelbrot.GetRadius() / std::pow(1.1f, io.MouseWheel));
-
-				glm::dvec2 fMousePos = m_Mandelbrot.MapCoordsToPos(mousePos);
-
-				glm::dvec2 delta = fMousePos - iMousePos;
-				m_Mandelbrot.SetCenter(m_Mandelbrot.GetCenter() - delta);
 			}
 		}
 
 		ImGui::GetCurrentWindow()->DrawList->AddCallback(DisableBlendCallback, nullptr);
-		ImGui::Image((ImTextureID)(intptr_t)m_Mandelbrot.GetTexture(), viewportPanelSize, ImVec2{0, 1}, ImVec2{1, 0});
+		ImGui::Image((ImTextureID)(intptr_t)m_Mandelbrot.GetTexture(), ImGui::GetContentRegionAvail(), ImVec2{0, 1}, ImVec2{1, 0});
 		ImGui::GetCurrentWindow()->DrawList->AddCallback(EnableBlendCallback, nullptr);
 
 		ImGui::End();
@@ -348,52 +362,15 @@ void MainLayer::OnImGuiRender()
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });
 		m_JuliaMinimized = !ImGui::Begin("Julia");
 
-		auto mousePos = ImGui::GetMousePos() - ImGui::GetWindowPos() - ImGui::GetWindowContentRegionMin();
-		mousePos = mousePos * (m_ResolutionPercentage / 100.f);
-
 		// Resize
-		ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
-		ImVec2 viewportPanelSizeScaled = viewportPanelSize * (m_ResolutionPercentage / 100.f);
-		{
-			auto size = m_Julia.GetSize();
-			if (viewportPanelSizeScaled.x != size.x || viewportPanelSizeScaled.y != size.y)
-			{
-				m_Julia.SetSize(glm::vec2{ viewportPanelSizeScaled.x, viewportPanelSizeScaled.y });
-			}
-		}
+		FractalHandleResize(m_Julia, m_ResolutionPercentage);
 
 		// Events
 		if (ImGui::IsWindowHovered())
-		{
-			if (ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0) && mousePos.y >= 0)
-			{
-				if (mouseDeltaScaled.x != 0 || mouseDeltaScaled.y != 0)
-				{
-					glm::dvec2 center = m_Julia.MapCoordsToPos(m_Julia.MapPosToCoords(m_Julia.GetCenter()) - mouseDeltaScaled);
-					m_Julia.SetCenter(center);
-				}
-			}
-
-			if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && io.KeyCtrl)
-			{
-				m_Julia.SetCenter(m_Julia.MapCoordsToPos(mousePos));
-			}
-
-			if (io.MouseWheel != 0)
-			{
-				glm::dvec2 iMousePos = m_Julia.MapCoordsToPos(mousePos);
-
-				m_Julia.SetRadius(m_Julia.GetRadius() / std::pow(1.1f, io.MouseWheel));
-
-				glm::dvec2 fMousePos = m_Julia.MapCoordsToPos(mousePos);
-
-				glm::dvec2 delta = fMousePos - iMousePos;
-				m_Julia.SetCenter(m_Julia.GetCenter() - delta);
-			}
-		}
+			FractalHandleInteract(m_Julia, m_ResolutionPercentage);
 
 		ImGui::GetCurrentWindow()->DrawList->AddCallback(DisableBlendCallback, nullptr);
-		ImGui::Image((ImTextureID)(intptr_t)m_Julia.GetTexture(), viewportPanelSize, ImVec2{0, 1}, ImVec2{1, 0});
+		ImGui::Image((ImTextureID)(intptr_t)m_Julia.GetTexture(), ImGui::GetContentRegionAvail(), ImVec2{0, 1}, ImVec2{1, 0});
 		ImGui::GetCurrentWindow()->DrawList->AddCallback(EnableBlendCallback, nullptr);
 
 		ImGui::End();
@@ -407,10 +384,8 @@ void MainLayer::OnImGuiRender()
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, windowBgCol);
 		ImGui::Begin("Controls");
 
-
 		std::stringstream ss;
 		ss << std::fixed << std::setprecision(1) << frame_rate << "fps";
-
 		ImGui::Text(ss.str().c_str());
 
 		ImGui::Spacing();
@@ -432,16 +407,47 @@ void MainLayer::OnImGuiRender()
 				m_Julia.SetSize(juliaSize);
 			}
 
+			// If unlimited epochs, set m_MaxEpochs to 0 but keep the slider value to the previous value
+			static bool unlimited_epochs = m_MaxEpochs == 0;
+			static int max_epochs = unlimited_epochs ? 100 : m_MaxEpochs;
+			if (ImGui::Checkbox("Unlimited epochs", &unlimited_epochs))
+			{
+				if (unlimited_epochs)
+					m_MaxEpochs = 0;
+				else
+					m_MaxEpochs = max_epochs;
+
+				m_Mandelbrot.SetMaxEpochs(m_MaxEpochs);
+				m_Julia.SetMaxEpochs(m_MaxEpochs);
+			}
+
+			ImGui::SameLine(); HelpMarker("You may want to limit the maximum number of epochs to avoid getting a blurry image.");
+
+			ImGui::BeginDisabled(unlimited_epochs);
+			{
+				ImGui::Indent();
+
+				if (ImGui::DragInt("Max epochs", &max_epochs, 1, 1, 2000, "%d", ImGuiSliderFlags_AlwaysClamp))
+				{
+					m_MaxEpochs = max_epochs;
+
+					m_Mandelbrot.SetMaxEpochs(m_MaxEpochs);
+					m_Julia.SetMaxEpochs(m_MaxEpochs);
+				}
+
+				ImGui::Unindent();
+			}
+			ImGui::EndDisabled();
+
 			ImGui::Spacing();
 		}
 
 		if (ImGui::CollapsingHeader("Color function"))
 		{
-
 			if (ImGui::Button("Refresh"))
 				m_ShouldRefreshColors = true;
 
-			ImGui::SameLine(); HelpMarker("Edit the files (or add) in the 'assets/colors' folder and they will appear here after a refresh");
+			ImGui::SameLine(); HelpMarker("Edit the files (or add) in the 'assets/colors' folder and they will appear here after a refresh.");
 
 			ImVec2 button_size = { 100, 50 };
 			float window_visible_x2 = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
@@ -463,10 +469,10 @@ void MainLayer::OnImGuiRender()
 
 				ImGui::PopStyleColor();
 
-				float last_button_x2 = ImGui::GetItemRectMax().x;
-				float next_button_x2 = last_button_x2 + style.ItemSpacing.x + button_size.x; // Expected position if next button was on same line
+				float last_button_x = ImGui::GetItemRectMax().x;
+				float next_button_x = last_button_x + style.ItemSpacing.x + button_size.x; // Expected position if next button was on same line
 
-				if (i + 1 < m_colors.size() && next_button_x2 < window_visible_x2)
+				if (i + 1 < m_colors.size() && next_button_x < window_visible_x2)
 					ImGui::SameLine();
 
 				ImGui::PopID();
@@ -504,7 +510,7 @@ void MainLayer::OnImGuiRender()
 				m_Mandelbrot.SetRadius(radius);
 
 
-			if (ImGui::Button("Screenshot##MandelbrotB"))
+			if (ImGui::Button("Screenshot"))
 			{
 				CHAR fileName[260];
 				auto center = m_Mandelbrot.GetCenter();
@@ -539,7 +545,7 @@ void MainLayer::OnImGuiRender()
 				m_Julia.ResetRender();
 
 
-			if (ImGui::Button("Screenshot##JuliaB"))
+			if (ImGui::Button("Screenshot"))
 			{
 				CHAR fileName[260];
 				sprintf_s(fileName, "julia_%.15f,%.15f", m_JuliaC.x, m_JuliaC.y);

@@ -29,6 +29,8 @@ public:
 	void SetIterationsPerFrame(int iterationsPerFrame);
 	int GetIterationsPerFrame() const { return m_IterationsPerFrame; }
 
+	void SetMaxEpochs(int maxEpochs);
+
 	//void SetUniform()
 	GLuint GetShader() const { return m_Shader; }
 
@@ -56,6 +58,7 @@ private:
 
 	glm::uvec2 m_Size = { 1, 1 };
 	int m_IterationsPerFrame = 100;
+	int m_MaxEpochs = 0;
 	int m_Frame = 0;
 
 	ColorFunction* m_ColorFunction = nullptr;
