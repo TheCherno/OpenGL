@@ -195,6 +195,9 @@ MainLayer::MainLayer()
 	m_Mandelbrot.SetMaxEpochs(m_MaxEpochs);
 	m_Julia.SetMaxEpochs(m_MaxEpochs);
 
+	m_Mandelbrot.SetSmoothColor(m_SmoothColor);
+	m_Julia.SetSmoothColor(m_SmoothColor);
+
 	m_Mandelbrot.SetCenter({ -0.5, 0 });
 	m_Julia.SetRadius(1.3);
 }
@@ -444,13 +447,19 @@ void MainLayer::OnImGuiRender()
 
 		if (ImGui::CollapsingHeader("Color function"))
 		{
+			if (ImGui::Checkbox("Smooth Color", &m_SmoothColor))
+			{
+				m_Mandelbrot.SetSmoothColor(m_SmoothColor);
+				m_Julia.SetSmoothColor(m_SmoothColor);
+			}
+
 			if (ImGui::Button("Refresh"))
 				m_ShouldRefreshColors = true;
 
 			ImGui::SameLine(); HelpMarker("Edit the files (or add) in the 'assets/colors' folder and they will appear here after a refresh.");
 
 			ImVec2 button_size = { 100, 50 };
-			float window_visible_x2 = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
+			float window_visible_x = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
 			for (size_t i = 0; i < m_colors.size(); i++)
 			{
 				ImGui::PushID((int)i);
@@ -472,7 +481,7 @@ void MainLayer::OnImGuiRender()
 				float last_button_x = ImGui::GetItemRectMax().x;
 				float next_button_x = last_button_x + style.ItemSpacing.x + button_size.x; // Expected position if next button was on same line
 
-				if (i + 1 < m_colors.size() && next_button_x < window_visible_x2)
+				if (i + 1 < m_colors.size() && next_button_x < window_visible_x)
 					ImGui::SameLine();
 
 				ImGui::PopID();

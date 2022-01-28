@@ -14,6 +14,7 @@ uniform dvec2 i_yRange;
 uniform uint i_ItersPerFrame;
 uniform uint i_Frame;
 uniform uint i_MaxEpochs;
+uniform bool i_SmoothColor;
 
 uniform dvec2 i_JuliaC;
 
@@ -71,7 +72,7 @@ void julia(dvec2 c, uvec2 size, dvec2 xRange, dvec2 yRange)
 
     // Calculate the iterations
     int i;
-    for (i = 0; i < i_ItersPerFrame && z.x*z.x + z.y*z.y <= 4; i++)
+    for (i = 0; i < i_ItersPerFrame && z.x*z.x + z.y*z.y <= 100; i++)
     {
         z = dvec2(z.x*z.x - z.y*z.y, 2.0 * z.x*z.y) + c;
     }
@@ -91,7 +92,25 @@ void julia(dvec2 c, uvec2 size, dvec2 xRange, dvec2 yRange)
         );
         
         o_Iter = uvec2(epoch + 1, 0);
-        o_Color = vec4(get_color(int(iters) + i).xyz, 1.0 / float(epoch + 1));
+
+        vec3 color;
+        int n = int(iters) + i;
+        if (i_SmoothColor)
+        {
+            float log_zn = log(float(z.x*z.x + z.y*z.y)) / 2.0;
+            float nu = log(log_zn / log(2.0)) / log(2.0);
+
+            float new_iter = n + 1 - nu + 1.3;
+
+            vec3 color1 = get_color(int(new_iter));
+            vec3 color2 = get_color(int(new_iter) + 1);
+
+            color = mix(color1, color2, fract(new_iter));
+        }
+        else
+            color = get_color(n);
+
+        o_Color = vec4(color, 1.0 / float(epoch + 1));
     }
 }
 

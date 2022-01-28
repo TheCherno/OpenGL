@@ -31,6 +31,8 @@ public:
 
 	void SetMaxEpochs(int maxEpochs);
 
+	void SetSmoothColor(bool smoothColor);
+
 	//void SetUniform()
 	GLuint GetShader() const { return m_Shader; }
 
@@ -60,6 +62,7 @@ private:
 	int m_IterationsPerFrame = 100;
 	int m_MaxEpochs = 0;
 	int m_Frame = 0;
+	bool m_SmoothColor = false;
 
 	ColorFunction* m_ColorFunction = nullptr;
 
