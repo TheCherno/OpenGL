@@ -24,6 +24,11 @@ ImVec2 operator*(const ImVec2& vec, float scalar)
 	return { vec.x * scalar, vec.y * scalar };
 }
 
+ImVec2 operator/(const ImVec2& vec, float scalar)
+{
+	return { vec.x / scalar, vec.y / scalar };
+}
+
 std::ostream& operator<<(std::ostream& os, const ImVec2& vec)
 {
 	os << '(' << vec.x << ", " << vec.y << ')';
@@ -80,23 +85,23 @@ static bool SaveImageDialog(char (&fileName)[file_size])
 void MainLayer::RefreshColorFunctions()
 {
 	// Crear previews colors
-	m_colors.clear();
+	m_Colors.clear();
 
-	for (auto prev : m_colorsPreview)
+	for (auto prev : m_ColorsPreview)
 		glDeleteTextures(1, &prev);
-	m_colorsPreview.clear();
+	m_ColorsPreview.clear();
 
 	// Allocate new colors
-	m_colors.reserve(10);
+	m_Colors.reserve(10);
 	for (const auto& path : std::filesystem::directory_iterator("assets/colors"))
 	{
 		std::ifstream colorSrc(path.path());
-		m_colors.emplace_back(std::string((std::istreambuf_iterator<char>(colorSrc)), std::istreambuf_iterator<char>()));
+		m_Colors.emplace_back(std::string((std::istreambuf_iterator<char>(colorSrc)), std::istreambuf_iterator<char>()));
 	}
 
 	// Allocate the prevews
-	m_colorsPreview.reserve(m_colors.size());
-	for (const auto& c : m_colors)
+	m_ColorsPreview.reserve(m_Colors.size());
+	for (const auto& c : m_Colors)
 	{
 		// Make the preview
 		glm::uvec2 previewSize = { 100, 1 };
@@ -167,15 +172,15 @@ void main()
 			glDeleteFramebuffers(1, &fb);
 			glDeleteProgram(shader);
 
-			m_colorsPreview.push_back(tex);
+			m_ColorsPreview.push_back(tex);
 		}
 	}
 
-	if (m_selectedColor >= m_colors.size())
-		m_selectedColor = 0;
+	if (m_SelectedColor >= m_Colors.size())
+		m_SelectedColor = 0;
 
-	m_Mandelbrot.SetColorFunction(&m_colors[m_selectedColor]);
-	m_Julia.SetColorFunction(&m_colors[m_selectedColor]);
+	m_Mandelbrot.SetColorFunction(&m_Colors[m_SelectedColor]);
+	m_Julia.SetColorFunction(&m_Colors[m_SelectedColor]);
 }
 
 MainLayer::MainLayer()
@@ -186,8 +191,8 @@ MainLayer::MainLayer()
 {
 	RefreshColorFunctions();
 
-	m_Mandelbrot.SetColorFunction(&m_colors[m_selectedColor]);
-	m_Julia.SetColorFunction(&m_colors[m_selectedColor]);
+	m_Mandelbrot.SetColorFunction(&m_Colors[m_SelectedColor]);
+	m_Julia.SetColorFunction(&m_Colors[m_SelectedColor]);
 
 	m_Mandelbrot.SetIterationsPerFrame(m_ItersPerFrame);
 	m_Julia.SetIterationsPerFrame(m_ItersPerFrame);
@@ -204,13 +209,13 @@ MainLayer::MainLayer()
 
 MainLayer::~MainLayer()
 {
-	for (auto prev : m_colorsPreview)
+	for (auto prev : m_ColorsPreview)
 		glDeleteTextures(1, &prev);
 }
 
 void MainLayer::OnUpdate(GLCore::Timestep ts)
 {
-	frame_rate = 1 / ts.GetSeconds();
+	m_FrameRate = 1 / ts.GetSeconds();
 
 	if (m_ShouldRefreshColors)
 	{
@@ -244,14 +249,22 @@ void EnableBlendCallback(const ImDrawList* parent_list, const ImDrawCmd* cmd)
 	glEnable(GL_BLEND);
 }
 
-void FractalHandleInteract(FractalVisualizer& fract, int resolution_percentage)
+ImVec2 ImagePosToWindowPos(const ImVec2& imagePos, int resolutionPercentage)
+{
+	return imagePos / (resolutionPercentage / 100.f) + ImGui::GetWindowPos() + ImGui::GetWindowContentRegionMin();
+}
+
+ImVec2 WindowPosToImagePos(const ImVec2& windowPos, int resolutionPercentage)
+{
+	return (windowPos - ImGui::GetWindowPos() - ImGui::GetWindowContentRegionMin()) * (resolutionPercentage / 100.f);
+}
+
+void FractalHandleInteract(FractalVisualizer& fract, int resolutionPercentage)
 {
 	ImGuiIO& io = ImGui::GetIO();
-	auto mouseDeltaScaled = io.MouseDelta * (resolution_percentage / 100.f);
+	auto mouseDeltaScaled = io.MouseDelta * (resolutionPercentage / 100.f);
 
-	auto mousePos = ImGui::GetMousePos() - ImGui::GetWindowPos() - ImGui::GetWindowContentRegionMin();
-	mousePos = mousePos * (resolution_percentage / 100.f);
-
+	auto mousePos = WindowPosToImagePos(ImGui::GetMousePos(), resolutionPercentage);
 	
 	if (ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0) && mousePos.y >= 0)
 	{
@@ -280,14 +293,32 @@ void FractalHandleInteract(FractalVisualizer& fract, int resolution_percentage)
 	}
 }
 
-void FractalHandleResize(FractalVisualizer& fract, int resolution_percentage)
+void FractalHandleResize(FractalVisualizer& fract, int resolutionPercentage)
 {
-	ImVec2 viewportPanelSizeScaled = ImGui::GetContentRegionAvail() * (resolution_percentage / 100.f);
+	ImVec2 viewportPanelSizeScaled = ImGui::GetContentRegionAvail() * (resolutionPercentage / 100.f);
 
 	auto size = fract.GetSize();
 	if (glm::uvec2{ viewportPanelSizeScaled.x, viewportPanelSizeScaled.y } != size)
 	{
 		fract.SetSize(glm::uvec2{ viewportPanelSizeScaled.x, viewportPanelSizeScaled.y });
+	}
+}
+
+void DrawIterations(const glm::dvec2& z0, const glm::dvec2& c, const ImColor& baseColor, FractalVisualizer& fract, int resolutionPercentage)
+{
+	ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+	glm::dvec2 z = z0;
+	for (int i = 0; i < 100; i++)
+	{
+		auto p0 = ImagePosToWindowPos(fract.MapPosToCoords(z), resolutionPercentage);
+		z = glm::dvec2(z.x * z.x - z.y * z.y, 2.0 * z.x * z.y) + c;
+		auto p1 = ImagePosToWindowPos(fract.MapPosToCoords(z), resolutionPercentage);
+
+		float scale = 10.f;
+		ImColor color(baseColor);
+		color.Value.w *= scale / (i + scale);
+		draw_list->AddLine(p0, p1, color, 2.f);
 	}
 }
 
@@ -337,24 +368,32 @@ void MainLayer::OnImGuiRender()
 		// Resize
 		FractalHandleResize(m_Mandelbrot, m_ResolutionPercentage);
 
+		// Draw
+		ImGui::GetCurrentWindow()->DrawList->AddCallback(DisableBlendCallback, nullptr);
+		ImGui::Image((ImTextureID)(intptr_t)m_Mandelbrot.GetTexture(), ImGui::GetContentRegionAvail(), ImVec2{0, 1}, ImVec2{1, 0});
+		ImGui::GetCurrentWindow()->DrawList->AddCallback(EnableBlendCallback, nullptr);
+
 		// Events
 		if (ImGui::IsWindowHovered())
 		{
 			FractalHandleInteract(m_Mandelbrot, m_ResolutionPercentage);
 
+			auto mousePos = WindowPosToImagePos(ImGui::GetMousePos(), m_ResolutionPercentage);
+			
 			// Right click to set `julia c`
 			if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) ||
 				(ImGui::IsMouseDragging(ImGuiMouseButton_Right, 0) && (io.MouseDelta.x != 0 || io.MouseDelta.y != 0)))
 			{
-				auto mousePos = (ImGui::GetMousePos() - ImGui::GetWindowPos() - ImGui::GetWindowContentRegionMin()) * (m_ResolutionPercentage / 100.f);
 				m_JuliaC = m_Mandelbrot.MapCoordsToPos(mousePos);
 				m_Julia.ResetRender();
 			}
-		}
 
-		ImGui::GetCurrentWindow()->DrawList->AddCallback(DisableBlendCallback, nullptr);
-		ImGui::Image((ImTextureID)(intptr_t)m_Mandelbrot.GetTexture(), ImGui::GetContentRegionAvail(), ImVec2{0, 1}, ImVec2{1, 0});
-		ImGui::GetCurrentWindow()->DrawList->AddCallback(EnableBlendCallback, nullptr);
+			if (ImGui::IsMouseDown(ImGuiMouseButton_Middle))
+			{
+				glm::dvec2 c = m_Mandelbrot.MapCoordsToPos(mousePos);
+				DrawIterations(c, c, m_IterationsColor, m_Mandelbrot, m_ResolutionPercentage);
+			}
+		}
 
 		ImGui::End();
 		ImGui::PopStyleVar();
@@ -368,13 +407,23 @@ void MainLayer::OnImGuiRender()
 		// Resize
 		FractalHandleResize(m_Julia, m_ResolutionPercentage);
 
-		// Events
-		if (ImGui::IsWindowHovered())
-			FractalHandleInteract(m_Julia, m_ResolutionPercentage);
-
+		// Draw
 		ImGui::GetCurrentWindow()->DrawList->AddCallback(DisableBlendCallback, nullptr);
 		ImGui::Image((ImTextureID)(intptr_t)m_Julia.GetTexture(), ImGui::GetContentRegionAvail(), ImVec2{0, 1}, ImVec2{1, 0});
 		ImGui::GetCurrentWindow()->DrawList->AddCallback(EnableBlendCallback, nullptr);
+
+		// Events
+		if (ImGui::IsWindowHovered())
+		{
+			FractalHandleInteract(m_Julia, m_ResolutionPercentage);
+
+			auto mousePos = WindowPosToImagePos(ImGui::GetMousePos(), m_ResolutionPercentage);
+
+			if (ImGui::IsMouseDown(ImGuiMouseButton_Middle))
+			{
+				DrawIterations(m_Julia.MapCoordsToPos(mousePos), m_JuliaC, m_IterationsColor, m_Julia, m_ResolutionPercentage);
+			}
+		}
 
 		ImGui::End();
 		ImGui::PopStyleVar();
@@ -388,7 +437,7 @@ void MainLayer::OnImGuiRender()
 		ImGui::Begin("Controls");
 
 		std::stringstream ss;
-		ss << std::fixed << std::setprecision(1) << frame_rate << "fps";
+		ss << std::fixed << std::setprecision(1) << m_FrameRate << "fps";
 		ImGui::Text(ss.str().c_str());
 
 		ImGui::Spacing();
@@ -443,6 +492,12 @@ void MainLayer::OnImGuiRender()
 			ImGui::EndDisabled();
 
 			ImGui::Spacing();
+
+			ImGui::ColorEdit4("Iterations color", &m_IterationsColor.Value.x);
+
+			ImGui::SameLine(); HelpMarker("Press the middle mouse button to show the first iterations at that point");
+
+			ImGui::Spacing();
 		}
 
 		if (ImGui::CollapsingHeader("Color function"))
@@ -460,20 +515,20 @@ void MainLayer::OnImGuiRender()
 
 			ImVec2 button_size = { 100, 50 };
 			float window_visible_x = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
-			for (size_t i = 0; i < m_colors.size(); i++)
+			for (size_t i = 0; i < m_Colors.size(); i++)
 			{
 				ImGui::PushID((int)i);
 
-				if (m_selectedColor == i)
+				if (m_SelectedColor == i)
 					ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_ButtonActive]);
 				else
 					ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_Button]);
 
-				if (ImGui::ImageButton((ImTextureID)(intptr_t)m_colorsPreview[i], button_size))
+				if (ImGui::ImageButton((ImTextureID)(intptr_t)m_ColorsPreview[i], button_size))
 				{
-					m_selectedColor = i;
-					m_Mandelbrot.SetColorFunction(&m_colors[m_selectedColor]);
-					m_Julia.SetColorFunction(&m_colors[m_selectedColor]);
+					m_SelectedColor = i;
+					m_Mandelbrot.SetColorFunction(&m_Colors[m_SelectedColor]);
+					m_Julia.SetColorFunction(&m_Colors[m_SelectedColor]);
 				}
 
 				ImGui::PopStyleColor();
@@ -481,7 +536,7 @@ void MainLayer::OnImGuiRender()
 				float last_button_x = ImGui::GetItemRectMax().x;
 				float next_button_x = last_button_x + style.ItemSpacing.x + button_size.x; // Expected position if next button was on same line
 
-				if (i + 1 < m_colors.size() && next_button_x < window_visible_x)
+				if (i + 1 < m_Colors.size() && next_button_x < window_visible_x)
 					ImGui::SameLine();
 
 				ImGui::PopID();
@@ -489,7 +544,7 @@ void MainLayer::OnImGuiRender()
 
 			ImGui::Spacing();
 			ImGui::Text("Color function parameters");
-			for (auto& u : m_colors[m_selectedColor].GetUniforms())
+			for (auto& u : m_Colors[m_SelectedColor].GetUniforms())
 			{
 				if (ImGui::DragFloat(u.name.c_str(), &u.val, 1, u.range.x, u.range.y))
 				{
