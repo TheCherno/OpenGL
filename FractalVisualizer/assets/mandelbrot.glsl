@@ -35,7 +35,6 @@ dvec2 mandelbrot(dvec2 z, dvec2 c)
 
 void main()
 {
-    // mandelbrot(dvec2(0, 0), i_Size, i_xRange, i_yRange);
     // Outside information
     dvec2 z;
     uint epoch;

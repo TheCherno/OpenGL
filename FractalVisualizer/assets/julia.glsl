@@ -37,7 +37,6 @@ dvec2 mandelbrot(dvec2 z, dvec2 c)
 
 void main()
 {
-    // julia(i_JuliaC, i_Size, i_xRange, i_yRange);
     // Outside information
     uint epoch;
     uint iters;
