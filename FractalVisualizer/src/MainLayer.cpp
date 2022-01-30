@@ -330,6 +330,35 @@ void MainLayer::OnImGuiRender()
 
 	//ImGui::ShowDemoWindow();
 
+	// Help
+	if (ImGui::IsKeyPressed(ImGuiKey_H))
+		m_ShowHelp = !m_ShowHelp;
+
+	if (m_ShowHelp)
+	{
+		ImGui::Begin("Help", &m_ShowHelp, ImGuiWindowFlags_AlwaysAutoResize);
+
+		ImGui::Text("Controls:");
+		ImGui::BulletText("Mouse drag to pan");
+		ImGui::BulletText("Mouse wheel to zoom");
+		ImGui::BulletText("CTRL + left click to set the center to the mouse location");
+		ImGui::BulletText("Middle mouse button to show the first iterations of the equation");
+		ImGui::BulletText("Left click the mandelbrot set to set the julia c to the mouse location");
+		ImGui::BulletText("H to toggle this help window");
+
+		ImGui::Spacing();
+
+		ImGui::Text("Features:");
+		ImGui::BulletText("All panels (including this one) can be moved and docked wherever you want.");
+		ImGui::BulletText("You can edit (or add) the color functions by editing (or adding) the .glsl\n"
+						  "shaders in the ./assets/colors folder. In this files use the preprocessor\n"
+						  "command `#uniform <name> <default> <slider_speed> <min> <max>` to set a\n"
+						  "custom float uniform which will be exposed through the UI. You can set the\n"
+						  "min and/or max values to NULL to indicate it is unbounded.");
+
+		ImGui::End();
+	}
+
 	// Mandelbrot
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{ 0, 0 });

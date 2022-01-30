@@ -32,6 +32,7 @@ private:
 	std::vector<ColorFunction> m_Colors;
 	size_t m_SelectedColor = 0;
 	ImColor m_IterationsColor = { 1.f, 1.f, 1.f, 0.9f };
+	bool m_ShowHelp = true;
 	
 	//glm::dvec2 m_MandelbrotZ = { 0, 0 };
 	bool m_MandelbrotMinimized = true;
