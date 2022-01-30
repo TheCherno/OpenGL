@@ -1,4 +1,7 @@
-#uniform colorMult 1000 1 NULL;
+#uniform colorMult 100 1 1 NULL;
+#uniform saturation 1 0.01 0 1;
+#uniform brightness 1 0.01 0 1;
+#uniform offset 0 0.01 0 1;
 vec3 hsv2rgb(vec3 c)
 {
     vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
@@ -8,5 +11,5 @@ vec3 hsv2rgb(vec3 c)
 
 vec3 get_color(int i)
 {
-    return hsv2rgb(vec3(i / colorMult, 1, 1));
+    return hsv2rgb(vec3(i / colorMult + offset, saturation, brightness));
 }

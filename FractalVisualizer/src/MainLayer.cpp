@@ -148,7 +148,7 @@ void main()
 			GLint loc;
 
 			loc = glGetUniformLocation(shader, "range");
-			glUniform1ui(loc, 1000);
+			glUniform1ui(loc, 100);
 
 			loc = glGetUniformLocation(shader, "size");
 			glUniform2ui(loc, previewSize.x, previewSize.y);

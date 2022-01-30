@@ -1,4 +1,5 @@
-#uniform colorMult 250 1 NULL;
+#uniform colorMult 25 1 1 NULL;
+#uniform offset 0 0.05 0 4;
 vec3 colors[] = vec3[](
 	vec3(0.0, 0.0, 0.0),
 	vec3(0.6, 0.22, 0.26),
@@ -8,7 +9,7 @@ vec3 colors[] = vec3[](
 );
 vec3 get_color(int iters)
 {
-	float x = iters / colorMult;
+	float x = iters / colorMult + offset;
     x = mod(x, colors.length() - 1);
 
     if (x == colors.length())

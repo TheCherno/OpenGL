@@ -1,4 +1,4 @@
-#uniform colorMult 200 1 NULL;
+#uniform colorMult 50 1 1 NULL;
 vec3 get_color(int i)
 {
     float t = exp(-i / colorMult);
