@@ -8,12 +8,13 @@ ColorFunction::ColorFunction(const std::string& src) : m_src(src)
 	m_src = src;
 	for (size_t start; (start = m_src.find("#uniform ")) != std::string::npos;)
 	{
-		size_t end = m_src.find(';');
+		size_t end = m_src.substr(start).find_first_of(';') + start;
+
 		std::stringstream ss(m_src.substr(start + 9, end - start - 9));
 
 		std::string name, min_s, max_s;
-		float val;
-		ss >> name >> val >> min_s >> max_s;
+		float val, speed;
+		ss >> name >> val >> speed >> min_s >> max_s;
 
 		glm::vec2 range;
 		range.x = (min_s == "NULL" ? FLT_MIN : std::stof(min_s));
@@ -25,14 +26,9 @@ ColorFunction::ColorFunction(const std::string& src) : m_src(src)
 		m_src.erase(start, end - start);
 		m_src.insert(start, uniform.str());
 
-		m_uniforms.emplace_back(name, range, val);
+		m_uniforms.emplace_back(name, range, val, speed);
 	}
 }
-
-//ColorFunction::~ColorFunction()
-//{
-//	glDeleteTextures(1, &preview);
-//}
 
 std::vector<ColorFunction::Uniform>& ColorFunction::GetUniforms()
 {
@@ -48,8 +44,3 @@ const std::string& ColorFunction::GetSource() const
 {
 	return m_src;
 }
-
-//ImTextureID ColorFunction::GetPreview() const
-//{
-//	return (ImTextureID)(intptr_t)preview; // First cast to 'intptr_t' to avoid warning
-//}

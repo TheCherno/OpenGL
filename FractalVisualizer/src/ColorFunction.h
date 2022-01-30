@@ -12,9 +12,10 @@ public:
 		glm::vec2 range;
 		float default_val;
 		float val;
+		float speed;
 
-		Uniform(const std::string& name, const glm::vec2& range, float default_val)
-			: name(name), range(range), default_val(default_val), val(default_val) {}
+		Uniform(const std::string& name, const glm::vec2& range, float default_val, float speed)
+			: name(name), range(range), default_val(default_val), val(default_val), speed(speed) {}
 	};
 
 private:

@@ -1,5 +1,3 @@
-#if 1
-
 #include "MainLayer.h"
 
 #include <iomanip>
@@ -324,39 +322,11 @@ void DrawIterations(const glm::dvec2& z0, const glm::dvec2& c, const ImColor& ba
 
 void MainLayer::OnImGuiRender()
 {
-	static bool dockspaceOpen = true;
-	static bool opt_fullscreen_persistant = true;
-	bool opt_fullscreen = opt_fullscreen_persistant;
-
-	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking; //| ImGuiWindowFlags_MenuBar;
-	if (opt_fullscreen)
-	{
-		ImGuiViewport* viewport = ImGui::GetMainViewport();
-		ImGui::SetNextWindowPos(viewport->Pos);
-		ImGui::SetNextWindowSize(viewport->Size);
-		ImGui::SetNextWindowViewport(viewport->ID);
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-		window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-		window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-	}
-
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-	ImGui::Begin("DockSpace", &dockspaceOpen, window_flags);
-	ImGui::PopStyleVar();
-
-	if (opt_fullscreen)
-		ImGui::PopStyleVar(2);
-
+	ImGuiStyle& style = ImGui::GetStyle();
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigWindowsMoveFromTitleBarOnly = true;
 
-	ImGuiStyle& style = ImGui::GetStyle();
-	if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
-	{
-		ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
-		ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f));
-	}
+	ImGui::DockSpaceOverViewport();
 
 	//ImGui::ShowDemoWindow();
 
@@ -436,9 +406,7 @@ void MainLayer::OnImGuiRender()
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, windowBgCol);
 		ImGui::Begin("Controls");
 
-		std::stringstream ss;
-		ss << std::fixed << std::setprecision(1) << m_FrameRate << "fps";
-		ImGui::Text(ss.str().c_str());
+		ImGui::Text("%.1ffps", m_FrameRate);
 
 		ImGui::Spacing();
 
@@ -459,7 +427,7 @@ void MainLayer::OnImGuiRender()
 				m_Julia.SetSize(juliaSize);
 			}
 
-			// If unlimited epochs, set m_MaxEpochs to 0 but keep the slider value to the previous value
+			// If unlimited epochs is checked, set m_MaxEpochs to 0 but keep the slider value to the previous value
 			static bool unlimited_epochs = m_MaxEpochs == 0;
 			static int max_epochs = unlimited_epochs ? 100 : m_MaxEpochs;
 			if (ImGui::Checkbox("Unlimited epochs", &unlimited_epochs))
@@ -493,6 +461,7 @@ void MainLayer::OnImGuiRender()
 
 			ImGui::Spacing();
 
+			ImGui::AlignTextToFramePadding();
 			ImGui::ColorEdit4("Iterations color", &m_IterationsColor.Value.x);
 
 			ImGui::SameLine(); HelpMarker("Press the middle mouse button to show the first iterations at that point");
@@ -511,7 +480,7 @@ void MainLayer::OnImGuiRender()
 			if (ImGui::Button("Refresh"))
 				m_ShouldRefreshColors = true;
 
-			ImGui::SameLine(); HelpMarker("Edit the files (or add) in the 'assets/colors' folder and they will appear here after a refresh.");
+			ImGui::SameLine(); HelpMarker("Edit (or add) the files in the 'assets/colors' folder and they will appear here after a refresh.");
 
 			ImVec2 button_size = { 100, 50 };
 			float window_visible_x = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
@@ -546,7 +515,7 @@ void MainLayer::OnImGuiRender()
 			ImGui::Text("Color function parameters");
 			for (auto& u : m_Colors[m_SelectedColor].GetUniforms())
 			{
-				if (ImGui::DragFloat(u.name.c_str(), &u.val, 1, u.range.x, u.range.y))
+				if (ImGui::DragFloat(u.name.c_str(), &u.val, u.speed, u.range.x, u.range.y))
 				{
 					m_Mandelbrot.ResetRender();
 					m_Julia.ResetRender();
@@ -625,9 +594,4 @@ void MainLayer::OnImGuiRender()
 		ImGui::End(); // Controls
 		ImGui::PopStyleColor();
 	}
-
-	ImGui::End(); // Dockspace
 }
-
-
-#endif
