@@ -320,6 +320,19 @@ void DrawIterations(const glm::dvec2& z0, const glm::dvec2& c, const ImColor& ba
 	}
 }
 
+void PersistentMiddleClick(bool& clicked, glm::dvec2& pos, FractalVisualizer& fract, int resolutionPercentage)
+{
+	if (ImGui::IsMouseDown(ImGuiMouseButton_Middle))
+	{
+		clicked = true;
+		auto mousePos = WindowPosToImagePos(ImGui::GetMousePos(), resolutionPercentage);
+		pos = fract.MapCoordsToPos(mousePos);
+	}
+
+	if (ImGui::IsMouseReleased(ImGuiMouseButton_Middle) && !ImGui::GetIO().KeyCtrl)
+		clicked = false;
+}
+
 void MainLayer::OnImGuiRender()
 {
 	ImGuiStyle& style = ImGui::GetStyle();
@@ -343,6 +356,7 @@ void MainLayer::OnImGuiRender()
 		ImGui::BulletText("Mouse wheel to zoom");
 		ImGui::BulletText("CTRL + left click to set the center to the mouse location");
 		ImGui::BulletText("Middle mouse button to show the first iterations of the equation");
+		ImGui::BulletText("Hold CTRL while releasing the middle mouse button to keed showing iterations");
 		ImGui::BulletText("Left click the mandelbrot set to set the julia c to the mouse location");
 		ImGui::BulletText("H to toggle this help window");
 
@@ -369,7 +383,7 @@ void MainLayer::OnImGuiRender()
 
 		// Draw
 		ImGui::GetCurrentWindow()->DrawList->AddCallback(DisableBlendCallback, nullptr);
-		ImGui::Image((ImTextureID)(intptr_t)m_Mandelbrot.GetTexture(), ImGui::GetContentRegionAvail(), ImVec2{0, 1}, ImVec2{1, 0});
+		ImGui::Image((ImTextureID)(intptr_t)m_Mandelbrot.GetTexture(), ImGui::GetContentRegionAvail(), ImVec2{ 0, 1 }, ImVec2{ 1, 0 });
 		ImGui::GetCurrentWindow()->DrawList->AddCallback(EnableBlendCallback, nullptr);
 
 		// Events
@@ -378,7 +392,7 @@ void MainLayer::OnImGuiRender()
 			FractalHandleInteract(m_Mandelbrot, m_ResolutionPercentage);
 
 			auto mousePos = WindowPosToImagePos(ImGui::GetMousePos(), m_ResolutionPercentage);
-			
+
 			// Right click to set `julia c`
 			if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) ||
 				(ImGui::IsMouseDragging(ImGuiMouseButton_Right, 0) && (io.MouseDelta.x != 0 || io.MouseDelta.y != 0)))
@@ -386,13 +400,15 @@ void MainLayer::OnImGuiRender()
 				m_JuliaC = m_Mandelbrot.MapCoordsToPos(mousePos);
 				m_Julia.ResetRender();
 			}
-
-			if (ImGui::IsMouseDown(ImGuiMouseButton_Middle))
-			{
-				glm::dvec2 c = m_Mandelbrot.MapCoordsToPos(mousePos);
-				DrawIterations(c, c, m_IterationsColor, m_Mandelbrot, m_ResolutionPercentage);
-			}
 		}
+
+		static bool showIters = false;
+		static glm::dvec2 c;
+		if (ImGui::IsWindowHovered())
+			PersistentMiddleClick(showIters, c, m_Mandelbrot, m_ResolutionPercentage);
+
+		if (showIters)
+			DrawIterations(c, c, m_IterationsColor, m_Mandelbrot, m_ResolutionPercentage);
 
 		ImGui::End();
 		ImGui::PopStyleVar();
@@ -413,16 +429,15 @@ void MainLayer::OnImGuiRender()
 
 		// Events
 		if (ImGui::IsWindowHovered())
-		{
 			FractalHandleInteract(m_Julia, m_ResolutionPercentage);
 
-			auto mousePos = WindowPosToImagePos(ImGui::GetMousePos(), m_ResolutionPercentage);
+		static bool showIters = false;
+		static glm::dvec2 z;
+		if (ImGui::IsWindowHovered())
+			PersistentMiddleClick(showIters, z, m_Julia, m_ResolutionPercentage);
 
-			if (ImGui::IsMouseDown(ImGuiMouseButton_Middle))
-			{
-				DrawIterations(m_Julia.MapCoordsToPos(mousePos), m_JuliaC, m_IterationsColor, m_Julia, m_ResolutionPercentage);
-			}
-		}
+		if (showIters)
+			DrawIterations(z, m_JuliaC, m_IterationsColor, m_Julia, m_ResolutionPercentage);
 
 		ImGui::End();
 		ImGui::PopStyleVar();
