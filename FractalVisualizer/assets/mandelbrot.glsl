@@ -28,25 +28,31 @@ double rand(float s)
     return fract(sin(s * 12.9898) * 43758.5453);
 }
 
-void mandelbrot(dvec2 z0, uvec2 size, dvec2 xRange, dvec2 yRange)
+dvec2 mandelbrot(dvec2 z, dvec2 c)
 {
+    return dvec2(z.x*z.x - z.y*z.y, 2.0 * z.x*z.y) + c;
+}
+
+void main()
+{
+    // mandelbrot(dvec2(0, 0), i_Size, i_xRange, i_yRange);
     // Outside information
     dvec2 z;
     uint epoch;
     uint iters;
     if (i_Frame == 0)
     {
-        z = z0;
+        z = dvec2(0, 0);
         epoch = 0;
         iters = 0;
     }
     else
     {
-        uvec4 data = texture(i_Data, gl_FragCoord.xy / size);
+        uvec4 data = texture(i_Data, gl_FragCoord.xy / i_Size);
         z.x = packDouble2x32(data.xy);
         z.y = packDouble2x32(data.zw);
 
-        uvec2 iter_data = texture(i_Iter, gl_FragCoord.xy / size).xy;
+        uvec2 iter_data = texture(i_Iter, gl_FragCoord.xy / i_Size).xy;
         epoch = iter_data.x;
         iters = iter_data.y;
     }
@@ -62,14 +68,14 @@ void mandelbrot(dvec2 z0, uvec2 size, dvec2 xRange, dvec2 yRange)
     // Set c
     dvec2 c;
     dvec2 pos = gl_FragCoord.xy + dvec2(rand(epoch), rand(epoch + 1));
-    c.x = map(pos.x, 0, size.x, xRange.x, xRange.y);
-    c.y = map(pos.y, 0, size.y, yRange.x, yRange.y);
+    c.x = map(pos.x, 0, i_Size.x, i_xRange.x, i_xRange.y);
+    c.y = map(pos.y, 0, i_Size.y, i_yRange.x, i_yRange.y);
 
     // Calculate the iterations
     int i;
     for (i = 0; i < i_ItersPerFrame && z.x*z.x + z.y*z.y <= 100.0; i++)
     {
-        z = dvec2(z.x*z.x - z.y*z.y, 2.0 * z.x*z.y) + c;
+        z = mandelbrot(z, c);
     }
 
     // Output the data
@@ -81,7 +87,7 @@ void mandelbrot(dvec2 z0, uvec2 size, dvec2 xRange, dvec2 yRange)
     }
     else
     {
-        o_Data = uvec4(unpackDouble2x32(z0.x), unpackDouble2x32(z0.y));
+        o_Data = uvec4(unpackDouble2x32(0), unpackDouble2x32(0));
         o_Iter = uvec2(epoch + 1, 0);
 
         vec3 color;
@@ -103,9 +109,4 @@ void mandelbrot(dvec2 z0, uvec2 size, dvec2 xRange, dvec2 yRange)
 
         o_Color = vec4(color, 1.0 / float(epoch + 1));
     }
-}
-
-void main()
-{
-    mandelbrot(dvec2(0, 0), i_Size, i_xRange, i_yRange);
 }

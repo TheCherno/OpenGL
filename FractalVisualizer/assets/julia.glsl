@@ -30,8 +30,14 @@ double rand(float s)
     return fract(sin(s * 12.9898) * 43758.5453);
 }
 
-void julia(dvec2 c, uvec2 size, dvec2 xRange, dvec2 yRange)
+dvec2 mandelbrot(dvec2 z, dvec2 c)
 {
+    return dvec2(z.x*z.x - z.y*z.y, 2.0 * z.x*z.y) + c;
+}
+
+void main()
+{
+    // julia(i_JuliaC, i_Size, i_xRange, i_yRange);
     // Outside information
     uint epoch;
     uint iters;
@@ -42,22 +48,24 @@ void julia(dvec2 c, uvec2 size, dvec2 xRange, dvec2 yRange)
     }
     else
     {
-        uvec2 iter_data = texture(i_Iter, gl_FragCoord.xy / size).xy;
+        uvec2 iter_data = texture(i_Iter, gl_FragCoord.xy / i_Size).xy;
         epoch = iter_data.x;
         iters = iter_data.y;
     }
+
+    dvec2 c = i_JuliaC;
 
     // Set or load `z`
     dvec2 z;
     dvec2 pos = gl_FragCoord.xy + dvec2(rand(epoch), rand(epoch + 1));
     if (i_Frame == 0)
     {
-        z.y = map(pos.y, 0, size.y, yRange.x, yRange.y);
-        z.x = map(pos.x, 0, size.x, xRange.x, xRange.y);
+        z.y = map(pos.y, 0, i_Size.y, i_yRange.x, i_yRange.y);
+        z.x = map(pos.x, 0, i_Size.x, i_xRange.x, i_xRange.y);
     }
     else
     {
-        uvec4 data = texture(i_Data, gl_FragCoord.xy / size);
+        uvec4 data = texture(i_Data, gl_FragCoord.xy / i_Size);
         z.x = packDouble2x32(data.xy);
         z.y = packDouble2x32(data.zw);
     }
@@ -74,7 +82,7 @@ void julia(dvec2 c, uvec2 size, dvec2 xRange, dvec2 yRange)
     int i;
     for (i = 0; i < i_ItersPerFrame && z.x*z.x + z.y*z.y <= 100; i++)
     {
-        z = dvec2(z.x*z.x - z.y*z.y, 2.0 * z.x*z.y) + c;
+        z = mandelbrot(z, c);
     }
 
     // Output the data
@@ -87,8 +95,8 @@ void julia(dvec2 c, uvec2 size, dvec2 xRange, dvec2 yRange)
     else
     {
         o_Data = uvec4(
-            unpackDouble2x32(map(pos.x, 0, size.x, xRange.x, xRange.y)), 
-            unpackDouble2x32(map(pos.y, 0, size.y, yRange.x, yRange.y))
+            unpackDouble2x32(map(pos.x, 0, i_Size.x, i_xRange.x, i_xRange.y)), 
+            unpackDouble2x32(map(pos.y, 0, i_Size.y, i_yRange.x, i_yRange.y))
         );
         
         o_Iter = uvec2(epoch + 1, 0);
@@ -112,9 +120,4 @@ void julia(dvec2 c, uvec2 size, dvec2 xRange, dvec2 yRange)
 
         o_Color = vec4(color, 1.0 / float(epoch + 1));
     }
-}
-
-void main()
-{
-    julia(i_JuliaC, i_Size, i_xRange, i_yRange);
 }
