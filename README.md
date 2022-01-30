@@ -4,9 +4,10 @@ WIP fractal visualizer build on top of https://github.com/TheCherno/OpenGL.
 ## Main functionality
 
 - You can pan and zoom by dragging and using the mouse wheel.
-- Right click the mandelbrot image to set the c value for the julia set.
-- CTRL + click will set the center of the screen to mouse position.
-- Press the middle mouse button in the image to show the first iterations.
+- Left click the mandelbrot set to set the julia c to the mouse location.
+- CTRL + left click to set the center to the mouse location.
+- Middle mouse button to show the first iterations of the equation.
+- Hold CTRL while releasing the middle mouse button to keed showing iterations.
 
 ## Build
 

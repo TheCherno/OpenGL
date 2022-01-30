@@ -337,7 +337,6 @@ void MainLayer::OnImGuiRender()
 {
 	ImGuiStyle& style = ImGui::GetStyle();
 	ImGuiIO& io = ImGui::GetIO();
-	io.ConfigWindowsMoveFromTitleBarOnly = true;
 
 	ImGui::DockSpaceOverViewport();
 
@@ -347,18 +346,19 @@ void MainLayer::OnImGuiRender()
 	if (ImGui::IsKeyPressed(ImGuiKey_H))
 		m_ShowHelp = !m_ShowHelp;
 
+	io.ConfigWindowsMoveFromTitleBarOnly = false;
 	if (m_ShowHelp)
 	{
 		ImGui::Begin("Help", &m_ShowHelp, ImGuiWindowFlags_AlwaysAutoResize);
 
 		ImGui::Text("Controls:");
-		ImGui::BulletText("Mouse drag to pan");
-		ImGui::BulletText("Mouse wheel to zoom");
-		ImGui::BulletText("CTRL + left click to set the center to the mouse location");
-		ImGui::BulletText("Middle mouse button to show the first iterations of the equation");
-		ImGui::BulletText("Hold CTRL while releasing the middle mouse button to keed showing iterations");
-		ImGui::BulletText("Left click the mandelbrot set to set the julia c to the mouse location");
-		ImGui::BulletText("H to toggle this help window");
+		ImGui::BulletText("Mouse drag to pan.");
+		ImGui::BulletText("Mouse wheel to zoom.");
+		ImGui::BulletText("Left click the mandelbrot set to set the julia c to the mouse location.");
+		ImGui::BulletText("CTRL + left click to set the center to the mouse location.");
+		ImGui::BulletText("Middle mouse button to show the first iterations of the equation.");
+		ImGui::BulletText("Hold CTRL while releasing the middle mouse button to keed showing iterations.");
+		ImGui::BulletText("H to toggle this help window.");
 
 		ImGui::Spacing();
 
@@ -370,8 +370,22 @@ void MainLayer::OnImGuiRender()
 						  "custom float uniform which will be exposed through the UI. You can set the\n"
 						  "min and/or max values to NULL to indicate it is unbounded.");
 
+		ImGui::Spacing();
+		
+		ImGui::Text("Tips:");
+		ImGui::BulletText("If the images are too noisy, try increasing the colorMult parameter in the\n"
+						  "color function section of the controls panel.");
+		ImGui::BulletText("If the first iteration contains too much black parts, increase the number\n"
+						  "of iterations per frame. It may reduce the framerate, but it will reduce\n"
+						  "the ");
+		ImGui::BulletText("If the image ends up being too blurry after a while of rendering, try\n"
+						  "limiting the maximum number of epochs. This option is located in the general\n"
+						  "section of the controls panel.");
+
 		ImGui::End();
 	}
+
+	io.ConfigWindowsMoveFromTitleBarOnly = true;
 
 	// Mandelbrot
 	{
@@ -442,6 +456,8 @@ void MainLayer::OnImGuiRender()
 		ImGui::End();
 		ImGui::PopStyleVar();
 	}
+
+	io.ConfigWindowsMoveFromTitleBarOnly = false;
 
 	// Controls
 	{
