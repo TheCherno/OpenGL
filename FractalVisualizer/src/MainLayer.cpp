@@ -213,12 +213,16 @@ MainLayer::~MainLayer()
 
 void MainLayer::OnAttach()
 {
-	ImGui::StyleColorsDark();
-
 	ImGuiStyle& style = ImGui::GetStyle();
 	style.FrameRounding = 3.f;
 	style.GrabRounding = 3.f;
 	style.WindowRounding = 3.f;
+
+	ImGui::StyleColorsClassic();
+
+	ImVec4* colors = ImGui::GetStyle().Colors;
+	colors[ImGuiCol_WindowBg] = ImVec4(0.04f, 0.04f, 0.04f, 0.85f);
+	colors[ImGuiCol_TitleBg] = ImVec4(0.04f, 0.04f, 0.04f, 0.83f);
 
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigWindowsMoveFromTitleBarOnly = true;
