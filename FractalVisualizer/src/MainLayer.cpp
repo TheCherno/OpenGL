@@ -498,14 +498,14 @@ void MainLayer::OnImGuiRender()
 			}
 
 			// If unlimited epochs is checked, set m_MaxEpochs to 0 but keep the slider value to the previous value
-			static bool unlimited_epochs = m_MaxEpochs == 0;
-			static int max_epochs = unlimited_epochs ? 100 : m_MaxEpochs;
-			if (ImGui::Checkbox("Unlimited epochs", &unlimited_epochs))
+			static bool limitEpochs = m_MaxEpochs != 0;
+			static int max_epochs = limitEpochs ? m_MaxEpochs : 100;
+			if (ImGui::Checkbox("Limit epochs", &limitEpochs))
 			{
-				if (unlimited_epochs)
-					m_MaxEpochs = 0;
-				else
+				if (limitEpochs)
 					m_MaxEpochs = max_epochs;
+				else
+					m_MaxEpochs = 0;
 
 				m_Mandelbrot.SetMaxEpochs(m_MaxEpochs);
 				m_Julia.SetMaxEpochs(m_MaxEpochs);
@@ -513,7 +513,7 @@ void MainLayer::OnImGuiRender()
 
 			ImGui::SameLine(); HelpMarker("You may want to limit the maximum number of epochs to avoid getting a blurry image.");
 
-			ImGui::BeginDisabled(unlimited_epochs);
+			ImGui::BeginDisabled(!limitEpochs);
 			{
 				ImGui::Indent();
 

@@ -25,7 +25,7 @@ private:
 
 	int m_ResolutionPercentage = 100;
 	int m_ItersPerFrame = 100;
-	int m_MaxEpochs = 0;
+	int m_MaxEpochs = 100;
 	bool m_SmoothColor = true;
 
 	std::vector<GLuint> m_ColorsPreview;
