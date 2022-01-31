@@ -388,9 +388,10 @@ void MainLayer::OnImGuiRender()
 		ImGui::Text("TIPS:");
 		ImGui::BulletText("If the images are too noisy, try increasing the colorMult parameter in the\n"
 						  "color function section of the controls panel.");
-		ImGui::BulletText("If the first iteration contains too much black parts, increase the number\n"
-						  "of iterations per frame. It may reduce the framerate, but it will reduce\n"
-						  "the ");
+		ImGui::BulletText("If the first iteration contains too much black parts and you can not\n"
+						  "confortably pan the image, try increasing the number of iterations per\n"
+						  "frame. It may reduce the framerate but it would increase the quality of the\n"
+						  "first frame.");
 		ImGui::BulletText("If the image ends up being too blurry after a while of rendering, try\n"
 						  "limiting the maximum number of epochs. This option is located in the general\n"
 						  "section of the controls panel.");
