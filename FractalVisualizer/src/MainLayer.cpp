@@ -364,13 +364,14 @@ void MainLayer::OnImGuiRender()
 		ImGui::Begin("Help", &m_ShowHelp, ImGuiWindowFlags_AlwaysAutoResize);
 
 		ImGui::Text("CONTROLS:");
+		ImGui::BulletText("H to toggle this help window.");
 		ImGui::BulletText("Mouse drag to pan.");
 		ImGui::BulletText("Mouse wheel to zoom.");
 		ImGui::BulletText("Left click the mandelbrot set to set the julia c to the mouse location.");
 		ImGui::BulletText("CTRL + left click to set the center to the mouse location.");
 		ImGui::BulletText("Middle mouse button to show the first iterations of the equation.");
-		ImGui::BulletText("Hold CTRL while releasing the middle mouse button to keed showing iterations.");
-		ImGui::BulletText("H to toggle this help window.");
+		ImGui::BulletText("Hold CTRL while releasing the middle mouse button to continuously show the\n"
+						  "iterations.");
 
 		ImGui::Spacing();
 
