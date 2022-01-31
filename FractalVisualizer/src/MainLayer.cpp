@@ -211,6 +211,19 @@ MainLayer::~MainLayer()
 		glDeleteTextures(1, &prev);
 }
 
+void MainLayer::OnAttach()
+{
+	ImGui::StyleColorsDark();
+
+	ImGuiStyle& style = ImGui::GetStyle();
+	style.FrameRounding = 3.f;
+	style.GrabRounding = 3.f;
+	style.WindowRounding = 3.f;
+
+	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigWindowsMoveFromTitleBarOnly = true;
+}
+
 void MainLayer::OnUpdate(GLCore::Timestep ts)
 {
 	m_FrameRate = 1 / ts.GetSeconds();
@@ -233,7 +246,7 @@ void MainLayer::OnUpdate(GLCore::Timestep ts)
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-	glClearColor(0.0f, 1.0f, 1.0f, 1.0f);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
@@ -346,12 +359,11 @@ void MainLayer::OnImGuiRender()
 	if (ImGui::IsKeyPressed(ImGuiKey_H))
 		m_ShowHelp = !m_ShowHelp;
 
-	io.ConfigWindowsMoveFromTitleBarOnly = false;
 	if (m_ShowHelp)
 	{
 		ImGui::Begin("Help", &m_ShowHelp, ImGuiWindowFlags_AlwaysAutoResize);
 
-		ImGui::Text("Controls:");
+		ImGui::Text("CONTROLS:");
 		ImGui::BulletText("Mouse drag to pan.");
 		ImGui::BulletText("Mouse wheel to zoom.");
 		ImGui::BulletText("Left click the mandelbrot set to set the julia c to the mouse location.");
@@ -362,7 +374,7 @@ void MainLayer::OnImGuiRender()
 
 		ImGui::Spacing();
 
-		ImGui::Text("Features:");
+		ImGui::Text("FEATURES:");
 		ImGui::BulletText("All panels (including this one) can be moved and docked wherever you want.");
 		ImGui::BulletText("You can edit (or add) the color functions by editing (or adding) the .glsl\n"
 						  "shaders in the ./assets/colors folder. In this files use the preprocessor\n"
@@ -372,7 +384,7 @@ void MainLayer::OnImGuiRender()
 
 		ImGui::Spacing();
 		
-		ImGui::Text("Tips:");
+		ImGui::Text("TIPS:");
 		ImGui::BulletText("If the images are too noisy, try increasing the colorMult parameter in the\n"
 						  "color function section of the controls panel.");
 		ImGui::BulletText("If the first iteration contains too much black parts, increase the number\n"
@@ -384,8 +396,6 @@ void MainLayer::OnImGuiRender()
 
 		ImGui::End();
 	}
-
-	io.ConfigWindowsMoveFromTitleBarOnly = true;
 
 	// Mandelbrot
 	{
@@ -456,8 +466,6 @@ void MainLayer::OnImGuiRender()
 		ImGui::End();
 		ImGui::PopStyleVar();
 	}
-
-	io.ConfigWindowsMoveFromTitleBarOnly = false;
 
 	// Controls
 	{

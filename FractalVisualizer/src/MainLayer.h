@@ -12,7 +12,7 @@ public:
 	MainLayer();
 	~MainLayer();
 
-	//virtual void OnAttach() override;
+	virtual void OnAttach() override;
 	//virtual void OnDetach() override;
 	virtual void OnUpdate(GLCore::Timestep ts) override;
 	virtual void OnImGuiRender() override;
