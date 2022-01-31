@@ -7,7 +7,7 @@ WIP fractal visualizer build on top of https://github.com/TheCherno/OpenGL.
 - Left click the mandelbrot set to set the julia c to the mouse location.
 - CTRL + left click to set the center to the mouse location.
 - Middle mouse button to show the first iterations of the equation.
-- Hold CTRL while releasing the middle mouse button to keed showing iterations.
+- Hold CTRL while releasing the middle mouse button to continuously show the iterations.
 
 ## Build
 
