@@ -16,9 +16,9 @@ project "FractalVisualizer"
 		"../OpenGL-Core/vendor/spdlog/include",
 		"../OpenGL-Core/src",
 		"../OpenGL-Core/vendor",
-		"../OpenGL-Core/%{IncludeDir.glm}",
-		"../OpenGL-Core/%{IncludeDir.Glad}",
-		"../OpenGL-Core/%{IncludeDir.ImGui}"
+		"../OpenGL-Core/vendor/glm",
+		"../OpenGL-Core/vendor/Glad/include",
+		"../OpenGL-Core/vendor/imgui"
 	}
 
 	links {
