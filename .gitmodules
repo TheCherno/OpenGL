@@ -1,0 +1,3 @@
+[submodule "OpenGL-Core"]
+	path = OpenGL-Core
+	url = https://github.com/NullSeile/OpenGL-Core.git
