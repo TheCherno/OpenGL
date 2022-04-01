@@ -1,6 +1,6 @@
 [submodule "OpenGL-Core/vendor/glfw"]
 	path = OpenGL-Core/vendor/glfw
-	url = https://github.com/TheCherno/glfw
+	url = https://github.com/TobiasOnoufriou/glfw
 [submodule "OpenGL-Core/vendor/spdlog"]
 	path = OpenGL-Core/vendor/spdlog
 	url = https://github.com/gabime/spdlog
@@ -9,4 +9,4 @@
 	url = https://github.com/g-truc/glm
 [submodule "OpenGL-Core/vendor/imgui"]
 	path = OpenGL-Core/vendor/imgui
-	url = https://github.com/TheCherno/imgui
+	url = https://github.com/TobiasOnoufriou/imgui
