@@ -12,4 +12,4 @@
 	url = https://github.com/TobiasOnoufriou/imgui
 [submodule "OpenGL-Core/vendor/assimp"]
 	path = OpenGL-Core/vendor/assimp
-	url = https://github.com/assimp/assimp
+	url = https://github.com/TobiasOnoufriou/assimp
