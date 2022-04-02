@@ -1,10 +1,10 @@
 name: cpplint
 on: [push, pull_request]
 jobs:
-cpplint:
-  runs-on: windows-latest
-  steps:
-  - uses: actions/checkout@v2
-  - uses: actions/setup-python@v2
-  - run: pip install cpplint
-  - run: cpplint --recursive
+  cpplint:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+    - run: pip install cpplint
+    - run: cpplint --recursive
