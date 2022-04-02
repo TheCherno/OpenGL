@@ -14,7 +14,7 @@ SandboxLayer::~SandboxLayer()
 void SandboxLayer::OnAttach()
 {
 	EnableGLDebugging();
-
+	// In this function all call for model and file name is needed
 	// Init here
 }
 

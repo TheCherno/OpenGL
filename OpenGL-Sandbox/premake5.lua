@@ -21,7 +21,7 @@ project "OpenGL-Sandbox"
 		"../OpenGL-Core/%{IncludeDir.glm}",
 		"../OpenGL-Core/%{IncludeDir.Glad}",
 		"../OpenGL-Core/%{IncludeDir.ImGui}",
-		"../OpenGL-Core/%{IncludeDir.assimp}"
+		"../OpenGL-Core/%{IncludeDir.assimp}/include"
 	}
 
 	links

@@ -7,10 +7,10 @@
 [submodule "OpenGL-Core/vendor/glm"]
 	path = OpenGL-Core/vendor/glm
 	url = https://github.com/g-truc/glm
-[submodule "OpenGL-Core/vendor/assimp"]
-	path = OpenGL-Core/vendor/assimp
-	url = https://github.com/TobiasOnoufriou/assimp
 [submodule "OpenGL-Core/vendor/imgui"]
 	path = OpenGL-Core/vendor/imgui
 	url = https://github.com/TobiasOnoufriou/imgui
 
+[submodule "OpenGL-Core/vendor/assimp"]
+	path = OpenGL-Core/vendor/assimp
+	url = https://github.com/TobiasOnoufriou/assimp.git
