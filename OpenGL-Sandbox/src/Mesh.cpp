@@ -10,7 +10,5 @@ void Mesh::Draw(GLuint shaderId) {
 }
 
 bool Mesh::loadModel(const std::string& path) {
-
-
 	return true;
 }
