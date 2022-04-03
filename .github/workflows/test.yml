@@ -3,29 +3,28 @@ name: Build and Test
 on: [push, pull_request]
 jobs:
   run-msbuild-vstest:
-  runs-on: windows-latest
-  name: Run MSBuild and VSTest
+    runs-on: windows-latest
+    name: Run MSBuild and VSTest
   
-  steps:
-    - name: Checkout code
-      uses: actions/checkout@v2.1.0
-      id: checkout_code
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2.1.0
+        id: checkout_code
 
-    - name: Setup MSBuild and add to PATH
-      uses: microsoft/setup-msbuild@v1.0.0
-      id: setup_msbuild
+      - name: Setup MSBuild and add to PATH
+        uses: microsoft/setup-msbuild@v1.0.0
+        id: setup_msbuild
 
-    - name: Run MSBuild
-      id: run_msbuild
-      working-directory: $
-      run: msbuild .\OpenGL-Tests.sln
+      - name: Run MSBuild
+        id: run_msbuild
+        working-directory: $
+        run: msbuild .\OpenGL-Tests.sln
 
-    - name: Setup VSTest and add to PATH
-      uses: darenm/Setup-VSTest@v1
-      id: setup_vstest
+      - name: Setup VSTest and add to PATH
+        uses: darenm/Setup-VSTest@v1
+        id: setup_vstest
 
-    - name: Run VSTest
-      id: run_vstest
-      working-directory: $\x64\Debug\
-      run: vstest.console.exe /Platform:x64 .\UnitTests.dll
-      
+      - name: Run VSTest
+        id: run_vstest
+        working-directory: $\x64\Debug\
+        run: vstest.console.exe /Platform:x64 .\UnitTests.dll
