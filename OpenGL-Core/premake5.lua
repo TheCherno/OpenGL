@@ -10,7 +10,8 @@ project "OpenGL-Core"
 	pchheader "glpch.h"
 	pchsource "src/glpch.cpp"
 
-	defines {
+	defines 
+  {
 		-- "SWIG",
 		"ASSIMP_BUILD_NO_OWN_ZLIB",
 
@@ -92,7 +93,7 @@ project "OpenGL-Core"
 		"ASSIMP_BUILD_NO_DEBONE_PROCESS",
 		"ASSIMP_BUILD_NO_EMBEDTEXTURES_PROCESS",
 		"ASSIMP_BUILD_NO_GLOBALSCALE_PROCESS",
-}
+  }
 
 
 	files
@@ -124,7 +125,7 @@ project "OpenGL-Core"
 		-- 'assimp/code/glTF2/**',
 		-- 'assimp/code/glTF/**',
 		'${IncludeDir.assimp}/assimp/code/Assbin/**' -- For caching
-}
+  }
 
 	defines
 	{

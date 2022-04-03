@@ -1,4 +1,5 @@
 #include "SandboxLayer.h"
+#include "Mesh.h"
 
 using namespace GLCore;
 using namespace GLCore::Utils;
@@ -14,6 +15,8 @@ SandboxLayer::~SandboxLayer()
 void SandboxLayer::OnAttach()
 {
 	EnableGLDebugging();
+  Mesh* mesh = new Mesh();
+  mesh->LoadModel("sompath");
 	// In this function all call for model and file name is needed
 	// Init here
 }

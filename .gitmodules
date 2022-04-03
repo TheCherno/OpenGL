@@ -14,3 +14,6 @@
 [submodule "OpenGL-Core/vendor/assimp"]
 	path = OpenGL-Core/vendor/assimp
 	url = https://github.com/TobiasOnoufriou/assimp.git
+[submodule "OpenGL-Tests/vendor"]
+	path = OpenGL-Tests/vendor
+	url = https://github.com/google/googletest.git

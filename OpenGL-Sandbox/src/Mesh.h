@@ -23,12 +23,13 @@ struct Texture {
 
 class Mesh{
  public:
-  Mesh() {}
+  Mesh();
+  ~Mesh();
   bool Init();  // Call loadmodel, processnode and loadmaterialtexture.
   void Draw(GLuint shaderId);
-  bool loadModel(const std::string&  path);
-  bool processNode(aiNode* node, const aiScene* scene);
-  bool loadMaterialTextures(
+  bool LoadModel(const std::string&  path);
+  bool ProcessNode(aiNode* node, const aiScene* scene);
+  bool LoadMaterialTextures(
     aiMaterial* mat,
     aiTextureType type,
     std::string typeName);
